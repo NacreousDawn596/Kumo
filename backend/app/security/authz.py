@@ -59,7 +59,7 @@ def file_permission(db: Session, user: User, file: File) -> str | None:
             granted = True
         elif share.shared_with_group_id and is_group_member(db, user.id, share.shared_with_group_id):
             granted = True
-        elif share.shared_with_session_id and _in_session(db, user.id, share.shared_with_session_id):
+        elif share.study_session_id and _in_session(db, user.id, share.study_session_id):
             granted = True
         if granted and (best is None or _level(share.permission) > _level(best)):
             best = share.permission

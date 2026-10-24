@@ -19,11 +19,11 @@ from app.core.database import Base, engine  # noqa: E402
 from app.main import app  # noqa: E402
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _create_schema():
+@pytest.fixture(autouse=True)
+def _reset_schema():
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
-    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture()
