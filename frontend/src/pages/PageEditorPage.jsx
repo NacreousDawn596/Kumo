@@ -45,15 +45,27 @@ export default function PageEditorPage() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState([]);
+  const initializedFor = useRef(null);
 
   const { data: page, isLoading } = useQuery({
     queryKey: ["page", pageId],
     queryFn: () => api(`/api/pages/${pageId}`),
-    onSuccess: (d) => {
-      setTitle(d.title);
-      setBlocks(d.blocks.map((b) => ({ id: b.id, block_type: b.block_type, content: b.content || "", properties: b.properties })));
-    },
   });
+
+  useEffect(() => {
+    if (page && initializedFor.current !== pageId) {
+      setTitle(page.title);
+      setBlocks(
+        page.blocks.map((b) => ({
+          id: b.id,
+          block_type: b.block_type,
+          content: b.content || "",
+          properties: b.properties,
+        }))
+      );
+      initializedFor.current = pageId;
+    }
+  }, [page, pageId]);
 
   const { data: backlinks = [] } = useQuery({
     queryKey: ["backlinks", pageId],

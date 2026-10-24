@@ -30,11 +30,16 @@ export default function WhiteboardPage() {
   const { data: wb } = useQuery({
     queryKey: ["whiteboard", whiteboardId],
     queryFn: () => api(`/api/whiteboards/${whiteboardId}`),
-    onSuccess: (d) => {
-      setElements(d.elements || []);
-      seqCounter = d.elements.length + 1;
-    },
   });
+
+  const initializedFor = useRef(null);
+  useEffect(() => {
+    if (wb && initializedFor.current !== whiteboardId) {
+      setElements(wb.elements || []);
+      seqCounter = wb.elements.length + 1;
+      initializedFor.current = whiteboardId;
+    }
+  }, [wb, whiteboardId]);
 
   const toWorld = (clientX, clientY) => {
     const rect = svgRef.current.getBoundingClientRect();
