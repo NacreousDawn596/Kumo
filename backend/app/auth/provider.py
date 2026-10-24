@@ -25,6 +25,10 @@ class ProviderNotConfigured(Exception):
     pass
 
 
+class InvalidAssertion(Exception):
+    pass
+
+
 @dataclass
 class VerifiedIdentity:
     provider: str
@@ -50,23 +54,41 @@ class LocalProvider:
 
 
 class SchoolAppProvider:
-    """Documented scaffold. See infra/schoolapp-worker for the integration."""
+    """Verifies a short-lived assertion signed by the SchoolApp Worker.
+
+    The Worker logs the student into SchoolApp (via schoolapp.js), retrieves
+    the stable subject identifier, and returns an HMAC-signed assertion. The
+    backend verifies the signature, issuer, audience, and expiry — it never
+    handles or stores the student's SchoolApp password.
+    """
 
     name = "schoolapp"
 
     def verify_assertion(self, assertion: str) -> VerifiedIdentity:
-        if not (settings.schoolapp_issuer and settings.schoolapp_jwks_url):
+        if not settings.schoolapp_worker_secret:
             raise ProviderNotConfigured(
-                "SchoolApp is not configured. Set SCHOOLAPP_ISSUER, "
-                "SCHOOLAPP_JWKS_URL, and related settings, or use the local provider."
+                "SchoolApp is not configured. Set SCHOOLAPP_WORKER_SECRET to the "
+                "shared secret used by the Cloudflare Worker."
             )
-        # Real implementation: validate a JWT assertion's signature against the
-        # provider JWKS, then check issuer == schoolapp_issuer, audience ==
-        # schoolapp_audience, exp is in the future, and reject replays (jti
-        # cache). Extract the stable subject identifier.
-        raise ProviderNotConfigured(
-            "SchoolApp assertion verification is not yet implemented; the JWKS "
-            "validation contract requires the provider's documented endpoints."
+        from app.core.security import verify_hmac_token
+
+        try:
+            payload = verify_hmac_token(assertion, settings.schoolapp_worker_secret)
+        except ValueError as exc:
+            raise InvalidAssertion(f"Invalid SchoolApp assertion: {exc}") from exc
+
+        if payload.get("iss") != settings.schoolapp_worker_issuer:
+            raise InvalidAssertion("SchoolApp assertion issuer mismatch")
+        if payload.get("aud") != settings.schoolapp_worker_audience:
+            raise InvalidAssertion("SchoolApp assertion audience mismatch")
+        subject = payload.get("sub")
+        if not subject:
+            raise InvalidAssertion("SchoolApp assertion missing subject")
+        return VerifiedIdentity(
+            provider="schoolapp",
+            subject=str(subject),
+            email=payload.get("email"),
+            display_name=payload.get("name"),
         )
 
 

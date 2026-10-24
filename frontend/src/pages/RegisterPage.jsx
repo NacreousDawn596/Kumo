@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth.js";
 import { Button, Input } from "../components/ui.jsx";
+import SchoolAppLogin from "../components/SchoolAppLogin.jsx";
 import "./auth.css";
 
 export default function RegisterPage() {
@@ -10,6 +11,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ display_name: "", username: "", email: "", password: "" });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [saOpen, setSaOpen] = useState(false);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -39,7 +41,7 @@ export default function RegisterPage() {
         <h1 className="auth-title">Create your account</h1>
         <p className="auth-subtitle">Organize your academic life.</p>
 
-        <button className="auth-sso">
+        <button className="auth-sso" type="button" onClick={() => setSaOpen(true)}>
           <span className="auth-sso-dot" />
           Continue with SchoolApp
         </button>
@@ -82,6 +84,8 @@ export default function RegisterPage() {
           Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </div>
+
+      <SchoolAppLogin open={saOpen} onClose={() => setSaOpen(false)} />
     </div>
   );
 }

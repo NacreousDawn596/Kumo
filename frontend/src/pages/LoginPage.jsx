@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth.js";
 import { Button, Input } from "../components/ui.jsx";
+import SchoolAppLogin from "../components/SchoolAppLogin.jsx";
 import "./auth.css";
 
 export default function LoginPage() {
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [saOpen, setSaOpen] = useState(false);
 
   const from = location.state?.from?.pathname || "/";
 
@@ -41,7 +43,7 @@ export default function LoginPage() {
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-subtitle">Your engineering workspace, in one place.</p>
 
-        <button className="auth-sso">
+        <button className="auth-sso" type="button" onClick={() => setSaOpen(true)}>
           <span className="auth-sso-dot" />
           Continue with SchoolApp
         </button>
@@ -83,6 +85,8 @@ export default function LoginPage() {
           No account? <Link to="/register">Create one</Link>
         </p>
       </div>
+
+      <SchoolAppLogin open={saOpen} onClose={() => setSaOpen(false)} />
     </div>
   );
 }

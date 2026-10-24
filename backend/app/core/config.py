@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     schoolapp_token_url: str = ""
     schoolapp_jwks_url: str = ""
     schoolapp_audience: str = ""
+    # Shared secret with the Cloudflare Worker that verifies SchoolApp identity.
+    # The Worker signs a short-lived assertion with this HMAC key; the backend
+    # verifies it. Must match the WORKER's SCHOOLAPP_WORKER_SECRET.
+    schoolapp_worker_secret: str = ""
+    schoolapp_worker_issuer: str = "schoolapp-worker"
+    schoolapp_worker_audience: str = "kumo"
 
     # Limits
     max_upload_bytes: int = 50 * 1024 * 1024  # 50 MB

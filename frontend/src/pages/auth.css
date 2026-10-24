@@ -101,3 +101,10 @@
 .auth-footer a:hover {
   text-decoration: underline;
 }
+
+.sa-note {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--sp-3);
+}

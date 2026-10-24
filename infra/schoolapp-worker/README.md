@@ -1,63 +1,63 @@
-# SchoolApp integration — Cloudflare Worker boundary
+# SchoolApp identity worker
 
-This directory is an **honest scaffold** for the SchoolApp authentication
-integration. Kumo's preferred identity provider is SchoolApp, but the concrete
-OAuth/OIDC contract (authorize/token endpoints, JWKS URL, subject claim, and
-scopes) is provider-specific and was not available during development.
+A Cloudflare Worker that verifies a student's SchoolApp identity using
+[schoolapp.js](https://github.com/NacreousDawn596/schoolapp.js) and returns a
+short-lived, HMAC-signed assertion that the Kumo backend can verify.
 
-## What this boundary should do
+## Flow
 
-1. Receive the user's "Continue with SchoolApp" request.
-2. Generate an anti-forgery `state` and a `nonce`, then redirect to the
-   provider's authorize endpoint.
-3. On the callback, validate `state` and exchange the authorization code for
-   tokens via the provider's token endpoint (server-to-server, secret never
-   leaves the Worker).
-4. Verify the ID token/assertion: signature against the provider JWKS,
-   `iss`, `aud`, `exp`, and replay protections (`jti`/`nonce`).
-5. Mint a **short-lived, audience-restricted assertion** (or forward the
-   verified claims through the protected callback) that the Kumo backend can
-   trust without holding provider credentials.
+1. The Kumo frontend shows **Continue with SchoolApp**.
+2. The user enters their SchoolApp email + password in the Kumo sign-in screen.
+3. The frontend calls `POST /verify` on this worker with `{ email, password }`.
+4. The worker logs in to SchoolApp via `schoolapp.js`, retrieves the stable
+   student code (`Code`) and full name, and returns a 120-second HMAC-signed
+   assertion.
+5. The frontend posts the assertion to Kumo's `POST /api/auth/schoolapp/assert`,
+   which verifies the signature/issuer/audience/expiry and issues a Kumo session.
 
-## What is implemented
+The SchoolApp password is used once, never logged or stored, and travels only
+over TLS between this worker and the SchoolApp server.
 
-Nothing beyond this scaffold. The backend exposes `POST /api/auth/schoolapp/start`
-and `POST /api/auth/schoolapp/assert`, both of which return `501 Not Implemented`
-until the provider endpoints are supplied. The backend adapter
-(`backend/app/auth/provider.py`) documents exactly which settings are required.
+## Security
 
-## Config required (see `.env.example`)
+- **Shared secret**: the worker signs assertions with `SCHOOLAPP_WORKER_SECRET`;
+  the Kumo backend verifies with the same value (`SCHOOLAPP_WORKER_SECRET`).
+  They must match and be a long random string (`openssl rand -hex 32`).
+- **Short-lived + audience-restricted**: 120s TTL, `iss=schoolapp-worker`,
+  `aud=kumo`, expiry checked server-side.
+- **Rate limiting**: 10 requests/minute per IP (in-memory).
+- **No credential logging**: errors are sanitized; passwords never appear in logs.
+- **CORS**: restricted to the configured `ALLOWED_ORIGIN`.
 
-- `SCHOOLAPP_ISSUER`
-- `SCHOOLAPP_CLIENT_ID` / `SCHOOLAPP_CLIENT_SECRET`
-- `SCHOOLAPP_AUTHORIZE_URL` / `SCHOOLAPP_TOKEN_URL` / `SCHOOLAPP_JWKS_URL`
-- `SCHOOLAPP_AUDIENCE`
+## Deploy
 
-## Placeholder Worker (reference shape only)
+```sh
+cd infra/schoolapp-worker
+npm install
 
-```js
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === "/auth/start") {
-      const state = crypto.randomUUID();
-      const redirect = new URL(env.SCHOOLAPP_AUTHORIZE_URL);
-      redirect.searchParams.set("client_id", env.SCHOOLAPP_CLIENT_ID);
-      redirect.searchParams.set("response_type", "code");
-      redirect.searchParams.set("scope", "openid email profile");
-      redirect.searchParams.set("state", state);
-      redirect.searchParams.set("redirect_uri", env.REDIRECT_URI);
-      return Response.redirect(redirect.toString(), 302);
-    }
-    if (url.pathname === "/auth/callback") {
-      // Validate state, exchange code, verify ID token (JWKS + iss/aud/exp),
-      // then deliver a short-lived assertion to the Kumo backend callback.
-      return new Response("not implemented", { status: 501 });
-    }
-    return new Response("not found", { status: 404 });
-  },
-};
+# Set the shared secret (must match the backend's SCHOOLAPP_WORKER_SECRET)
+npx wrangler secret put SCHOOLAPP_WORKER_SECRET
+
+# Configure the Kumo frontend origin (CORS)
+npx wrangler secret put ALLOWED_ORIGIN
+# e.g. https://kumo.example.com
+
+npx wrangler deploy
 ```
 
-Until the provider contract is documented, use the `local` auth provider for
-development and tests. Do not invent endpoints or scrape credentials.
+Then set `SCHOOLAPP_WORKER_SECRET` on the backend (`.env`) to the same value,
+and point the frontend at the worker URL via `VITE_SCHOOLAPP_WORKER_URL`.
+
+## Endpoints
+
+- `GET /health` — liveness.
+- `POST /verify` — `{ email, password }` → `{ assertion, sub, name }` on success,
+  `401` on bad credentials, `429` when rate-limited.
+
+## Note on provider capabilities
+
+SchoolApp (ENSA Moulay Ismail) does not expose an OAuth/OIDC authorization
+flow — `schoolapp.js` authenticates with the student's email + password and
+scrapes the portal. As a result, the SchoolApp password must pass through this
+worker once. This is documented as a known limitation; it mirrors the SchoolApp
+web login and the password is never persisted.

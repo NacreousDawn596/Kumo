@@ -132,10 +132,14 @@ def schoolapp_start(body: SchoolAppStartRequest):
 
 @router.post("/schoolapp/assert", response_model=UserOut)
 def schoolapp_assert(body: SchoolAppAssertionRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    from app.auth.provider import InvalidAssertion
+
     try:
         identity = get_provider("schoolapp").verify_assertion(body.assertion)
     except ProviderNotConfigured as exc:
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from exc
+    except InvalidAssertion as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     user = service.find_or_create_for_identity(
         db, provider=identity.provider, subject=identity.subject,
         email=identity.email, display_name=identity.display_name,

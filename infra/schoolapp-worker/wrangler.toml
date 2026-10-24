@@ -1,0 +1,14 @@
+name = "schoolapp-worker"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Bind the worker to a custom route (set your domain when deploying):
+# routes = [{ pattern = "auth.example.com", custom_domain = true }]
+
+[observability]
+enabled = true
+
+# Configure via `wrangler secret put` / env vars (NOT committed):
+#   SCHOOLAPP_WORKER_SECRET — HMAC key shared with the Kumo backend.
+#   ALLOWED_ORIGIN — the Kumo frontend origin (CORS).
+#   SCHOOLAPP_BASE_URL — optional override (defaults to ENSAM SchoolApp).

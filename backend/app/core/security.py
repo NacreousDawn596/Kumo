@@ -80,3 +80,30 @@ def verify_access_token(token: str) -> dict:
     if not hmac.compare_digest(_b64url_decode(sig_b64), expected):
         raise ValueError("bad signature")
     return json.loads(_b64url_decode(payload_b64))
+
+
+def sign_hmac_token(payload: dict, secret: str, expires_seconds: int) -> str:
+    """Sign a JSON payload with HMAC-SHA256, embedding the expiry inside.
+
+    Used for the SchoolApp Worker -> backend assertion. Compact format:
+    ``base64url(payload).base64url(hmac)``.
+    """
+    body = {"exp": int(time.time()) + expires_seconds, **payload}
+    payload_b64 = _b64url_encode(json.dumps(body, separators=(",", ":")).encode("utf-8"))
+    signature = hmac.new(secret.encode("utf-8"), payload_b64.encode("ascii"), hashlib.sha256).digest()
+    return f"{payload_b64}.{_b64url_encode(signature)}"
+
+
+def verify_hmac_token(token: str, secret: str) -> dict:
+    """Verify an HMAC-signed token and return its payload (or raise)."""
+    try:
+        payload_b64, sig_b64 = token.split(".")
+    except (ValueError, AttributeError):
+        raise ValueError("malformed token")
+    expected = hmac.new(secret.encode("utf-8"), payload_b64.encode("ascii"), hashlib.sha256).digest()
+    if not hmac.compare_digest(_b64url_decode(sig_b64), expected):
+        raise ValueError("bad signature")
+    body = json.loads(_b64url_decode(payload_b64))
+    if int(body.get("exp", 0)) < int(time.time()):
+        raise ValueError("token expired")
+    return body
