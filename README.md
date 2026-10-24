@@ -2,31 +2,74 @@
 
 The unified engineering workspace for students and collaborative learning
 communities. Communication, knowledge, files, planning, and study tools in one
-connected environment.
+connected environment — not a collection of unrelated products in tabs.
 
-## Layout
+Everything a student needs to communicate, organize knowledge, plan work,
+study engineering, and collaborate lives in one connected workspace.
 
-- `backend/` — FastAPI + SQLAlchemy + SQLite backend.
-- `frontend/` — React + Vite frontend.
-- `infra/` — Docker, NixOS, and Cloudflare Worker integration scaffolding.
-- `docs/` — architecture, security, backup, and deployment documentation.
+## What's here
 
-See `docs/IMPLEMENTATION_STATUS.md` for an honest record of what is done and
-what remains incomplete.
+- **Notes & pages** — a block editor with templates, nested hierarchy, internal
+  links, backlinks, Markdown, and LaTeX (KaTeX).
+- **Knowledge graph** — a navigable, authorization-aware graph of real links.
+- **Vault** — private/group file storage, secure sharing, comments.
+- **Tasks, projects, calendar** — deadlines and events linked to notes, files,
+  and study rooms.
+- **Messaging & groups** — realtime chat, reactions, presence, roles.
+- **Collaboration** — live whiteboards and a collaborative PDF annotation
+  workspace.
+- **Study rooms** — sessions that tie documents, whiteboards, and chat together.
 
-## Quick start
+## Stack
+
+- **Frontend**: React (JS), Vite, React Router, TanStack Query, Zustand,
+  Lucide, KaTeX, react-markdown, PDF.js, d3-force.
+- **Backend**: FastAPI, SQLAlchemy 2.x, SQLite, Alembic, Argon2id.
+- **Realtime**: WebSocket (presence/events); WebRTC for peer audio.
+
+## Quick start (development)
+
+Prerequisites: Node 20+, Python 3.12+, `uv`.
 
 ```sh
 # Backend
 cd backend
 uv sync
 uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --port 8000
 
-# Frontend
+# Frontend (separate terminal)
 cd frontend
 npm install
-npm run dev
+npm run dev        # http://localhost:5173 (proxies /api to :8000)
 ```
 
-See `README.md` at the root and `docs/` for full instructions.
+Create an account at `/register`. Auth defaults to the local provider; see
+`infra/schoolapp-worker/` for the SchoolApp integration boundary.
+
+## Production (Docker Compose)
+
+```sh
+cp .env.example .env      # set SECRET_KEY, origins, COOKIE_SECURE=true
+docker compose up -d --build
+```
+
+## Tests
+
+```sh
+cd backend && uv run pytest
+cd frontend && npm run build
+```
+
+## Documentation
+
+- `docs/API.md` — endpoint reference.
+- `docs/SECURITY.md` — threat model and hardening.
+- `docs/DEPLOYMENT_NIXOS.md` — NixOS deployment.
+- `docs/BACKUP_RECOVERY.md` — backup/restore.
+- `docs/IMPLEMENTATION_STATUS.md` — honest status of what works vs. what's
+  incomplete.
+
+## License
+
+Proprietary (all rights reserved).

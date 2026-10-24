@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: sqlite:////data/kumo.db
+      STORAGE_PATH: /data/storage
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-local}
+    volumes:
+      - kumo-data:/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  kumo-data:
