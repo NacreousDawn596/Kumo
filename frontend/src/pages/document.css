@@ -1,0 +1,51 @@
+.document {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.doc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.doc-page-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0 var(--sp-2);
+}
+.doc-canvas-wrap {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-6);
+  position: relative;
+}
+.doc-stage {
+  position: relative;
+  width: fit-content;
+  height: fit-content;
+  box-shadow: var(--shadow-md);
+}
+.doc-canvas {
+  display: block;
+}
+.doc-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+.doc-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}

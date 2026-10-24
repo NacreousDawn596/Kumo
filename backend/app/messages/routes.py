@@ -146,7 +146,7 @@ def list_messages(
 
 
 @router.post("/conversations/{conversation_id}/messages", response_model=MessageOut, status_code=status.HTTP_201_CREATED)
-def send_message(conversation_id: str, body: MessageIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def send_message(conversation_id: str, body: MessageIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     _require_member(db, conversation_id, user)
     msg = Message(
         conversation_id=conversation_id,
@@ -159,6 +159,14 @@ def send_message(conversation_id: str, body: MessageIn, user: User = Depends(get
     db.add(msg)
     db.commit()
     db.refresh(msg)
+    # Broadcast a realtime event to other participants.
+    from app.realtime.manager import envelope, manager
+
+    await manager.broadcast(
+        f"conversation:{conversation_id}",
+        envelope("message", f"conversation:{conversation_id}", user.id, {"message": _serialize_message(msg).model_dump(mode="json")}),
+        exclude=user.id,
+    )
     return _serialize_message(msg)
 
 
