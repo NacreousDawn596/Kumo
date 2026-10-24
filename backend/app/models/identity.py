@@ -24,7 +24,7 @@ class User(IdMixin, TimestampMixin, Base):
     timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
     theme: Mapped[str] = mapped_column(String(16), default="system", nullable=False)
     language: Mapped[str] = mapped_column(String(8), default="en", nullable=False)
-    storage_quota_bytes: Mapped[int] = mapped_column(Integer, default=1024**3, nullable=False)
+    storage_quota_bytes: Mapped[int] = mapped_column(Integer, default=500 * 1024 * 1024, nullable=False)
     storage_used_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

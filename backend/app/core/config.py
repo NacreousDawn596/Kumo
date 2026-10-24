@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # Limits
     max_upload_bytes: int = 50 * 1024 * 1024  # 50 MB
-    default_storage_quota_bytes: int = 1024 * 1024 * 1024  # 1 GB
+    default_storage_quota_bytes: int = 500 * 1024 * 1024  # 500 MB per user
     max_message_bytes: int = 64 * 1024
 
     # Cookies

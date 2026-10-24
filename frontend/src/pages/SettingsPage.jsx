@@ -6,6 +6,7 @@ import { useAuth } from "../store/auth.js";
 import { useTheme } from "../store/theme.js";
 import { apiPatch } from "../api/client.js";
 import { Button, Input, Textarea } from "../components/ui.jsx";
+import StorageMeter from "../components/StorageMeter.jsx";
 import "../styles/pages.css";
 import "./settings.css";
 import { useState } from "react";
@@ -13,6 +14,7 @@ import { useState } from "react";
 const SECTIONS = [
   { id: "appearance", label: "Appearance" },
   { id: "profile", label: "Profile" },
+  { id: "storage", label: "Storage" },
   { id: "account", label: "Account" },
 ];
 
@@ -35,6 +37,7 @@ export default function SettingsPage() {
       <div className="settings-body">
         {section === "appearance" && <AppearanceSection />}
         {section === "profile" && <ProfileSection />}
+        {section === "storage" && <StorageSection />}
         {section === "account" && <AccountSection />}
       </div>
     </div>
@@ -105,6 +108,21 @@ function ProfileSection() {
         <Button variant="primary" loading={save.isPending} onClick={() => save.mutate()} style={{ alignSelf: "flex-start" }}>
           Save
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function StorageSection() {
+  return (
+    <div>
+      <h1 className="page-title">Storage</h1>
+      <p className="page-subtitle">
+        Each account has a 500 MB limit. Linked files (shared with you) count
+        toward your quota; remove a link to free space without deleting the file.
+      </p>
+      <div style={{ marginTop: 16 }}>
+        <StorageMeter />
       </div>
     </div>
   );

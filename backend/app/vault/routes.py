@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -82,9 +83,29 @@ def preview_file(file_id: str, user: User = Depends(get_current_user), db: Sessi
 def delete_file(file_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     record = service.require_file(db, user, file_id, "manage")
     storage.delete(record.storage_path)
-    user.storage_used_bytes = max(0, user.storage_used_bytes - record.size_bytes)
     db.delete(record)
     db.commit()
+    return None
+
+
+class TransferIn(BaseModel):
+    target_user_id: str
+
+
+@router.post("/files/{file_id}/transfer", response_model=FileOut)
+def transfer_file(file_id: str, body: TransferIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    record = service.require_file(db, user, file_id, "manage")
+    target = db.get(User, body.target_user_id)
+    if target is None or not target.is_active:
+        raise HTTPException(status_code=404, detail="Target user not found")
+    record = service.transfer_file(db, user, record, target)
+    return service.serialize_file(db, user, record)
+
+
+@router.post("/files/{file_id}/unlink", status_code=status.HTTP_204_NO_CONTENT)
+def unlink_file(file_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    record = service.require_file(db, user, file_id, "view")
+    service.unlink_file(db, user, record)
     return None
 
 

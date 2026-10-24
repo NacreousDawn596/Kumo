@@ -5,11 +5,18 @@ from __future__ import annotations
 import mimetypes
 
 from fastapi import HTTPException, UploadFile
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import File, FileComment, FileShare, FileVersion, User
+from app.models import (
+    File,
+    FileComment,
+    FileShare,
+    FileVersion,
+    Notification,
+    User,
+)
 from app.security.authz import file_permission, has_level, is_group_member
 from app.vault.storage import storage
 
@@ -44,13 +51,18 @@ async def store_upload(
     filename = name or upload.filename or "unnamed"
     mime = upload.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
-    # Enforce quota.
-    if user.storage_used_bytes >= user.storage_quota_bytes:
+    # Enforce quota (owned + linked files count against personal storage).
+    usage = get_storage_usage(db, user)
+    if usage["used_bytes"] >= user.storage_quota_bytes:
         raise HTTPException(status_code=413, detail="Storage quota exceeded")
 
     storage_id = storage.new_storage_id()
     rel = storage.relative_path(storage_id)
     size = await storage.write_stream(rel, _bounded_chunks(upload, settings.max_upload_bytes))
+
+    if usage["used_bytes"] + size > user.storage_quota_bytes:
+        storage.delete(rel)
+        raise HTTPException(status_code=413, detail="Storage quota exceeded")
 
     file = File(
         owner_id=user.id,
@@ -65,7 +77,6 @@ async def store_upload(
     )
     db.add(file)
     db.flush()
-    user.storage_used_bytes += size
     db.add(FileVersion(
         file_id=file.id, version=1, storage_id=storage_id, storage_path=rel,
         size_bytes=size, created_by=user.id,
@@ -110,6 +121,7 @@ def list_files(db: Session, user: User, *, group_id: str | None = None) -> list[
 
 
 def serialize_file(db: Session, user: User, file: File) -> dict:
+    perm = file_permission(db, user, file)
     return {
         "id": file.id,
         "name": file.name,
@@ -122,7 +134,8 @@ def serialize_file(db: Session, user: User, file: File) -> dict:
         "group_id": file.group_id,
         "created_at": file.created_at,
         "updated_at": file.updated_at,
-        "permission": file_permission(db, user, file),
+        "permission": perm,
+        "is_linked": file.owner_id != user.id and perm is not None,
     }
 
 
@@ -153,3 +166,89 @@ def add_comment(db: Session, user: User, file: File, *, body: str, page_number: 
     db.commit()
     db.refresh(comment)
     return comment
+
+
+def get_storage_usage(db: Session, user: User) -> dict:
+    """Compute personal storage usage.
+
+    Personal storage includes both owned files and files shared directly with
+    the user ("linked" files). Group/session shares do not count toward the
+    personal quota.
+    """
+    owned = db.execute(
+        select(func.coalesce(func.sum(File.size_bytes), 0)).where(
+            File.owner_id == user.id, File.is_folder.is_(False)
+        )
+    ).scalar_one()
+    linked = db.execute(
+        select(func.coalesce(func.sum(File.size_bytes), 0))
+        .join(FileShare, FileShare.file_id == File.id)
+        .where(
+            FileShare.shared_with_user_id == user.id,
+            File.owner_id != user.id,
+            File.is_folder.is_(False),
+        )
+    ).scalar_one()
+    return {
+        "quota_bytes": user.storage_quota_bytes,
+        "owned_bytes": int(owned),
+        "linked_bytes": int(linked),
+        "used_bytes": int(owned) + int(linked),
+    }
+
+
+def transfer_file(db: Session, owner: User, file: File, target: User) -> File:
+    """Transfer ownership to another student, preserving every record.
+
+    The file row, versions, shares, comments, and annotations all reference
+    ``file.id``, which does not change — only ``owner_id`` changes. The source
+    document is neither copied nor deleted.
+    """
+    if file.owner_id != owner.id:
+        raise HTTPException(status_code=403, detail="Only the owner can transfer this file")
+    if target.id == owner.id:
+        raise HTTPException(status_code=400, detail="File is already owned by you")
+    usage = get_storage_usage(db, target)
+    if usage["used_bytes"] + file.size_bytes > target.storage_quota_bytes:
+        raise HTTPException(status_code=413, detail="Recipient does not have enough storage")
+    file.owner_id = target.id
+    # Drop the recipient's prior share link (they now own it, so it is no longer "linked").
+    prior = db.execute(
+        select(FileShare).where(
+            FileShare.file_id == file.id, FileShare.shared_with_user_id == target.id
+        )
+    ).scalars().all()
+    for share in prior:
+        db.delete(share)
+    db.add(
+        Notification(
+            user_id=target.id,
+            type="file_transfer",
+            title=f"{owner.display_name} transferred a file to you",
+            body=file.name,
+            resource_type="file",
+            resource_id=file.id,
+        )
+    )
+    db.commit()
+    db.refresh(file)
+    return file
+
+
+def unlink_file(db: Session, user: User, file: File) -> None:
+    """Remove a direct share link for a file the user does not own.
+
+    This frees the linked quota without touching the underlying file, which
+    remains with its owner.
+    """
+    if file.owner_id == user.id:
+        raise HTTPException(status_code=400, detail="You own this file; use transfer instead")
+    share = db.execute(
+        select(FileShare).where(
+            FileShare.file_id == file.id, FileShare.shared_with_user_id == user.id
+        )
+    ).scalar_one_or_none()
+    if share is None:
+        raise HTTPException(status_code=404, detail="No linked share to remove")
+    db.delete(share)
+    db.commit()

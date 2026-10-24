@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class FileOut(BaseModel):
@@ -20,6 +20,7 @@ class FileOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     permission: str | None = None
+    is_linked: bool = False
 
 
 class FilePatch(BaseModel):
@@ -42,6 +43,8 @@ class FileCommentIn(BaseModel):
 
 
 class FileCommentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     author_id: str
     body: str

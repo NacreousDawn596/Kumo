@@ -19,6 +19,13 @@ def me(user: User = Depends(get_current_user)):
     return UserOut.model_validate(user)
 
 
+@router.get("/me/storage")
+def my_storage(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.vault.service import get_storage_usage
+
+    return get_storage_usage(db, user)
+
+
 @router.patch("/me", response_model=UserOut)
 def update_me(body: UserUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     data = body.model_dump(exclude_unset=True)
