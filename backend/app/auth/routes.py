@@ -112,6 +112,14 @@ def provider_info():
     return {"provider": settings.auth_provider, "available": settings.auth_provider in ("local", "schoolapp")}
 
 
+@router.post("/ws-ticket")
+def ws_ticket(user: User = Depends(get_current_user)):
+    from app.core.security import sign_access_token
+
+    ticket = sign_access_token({"sub": user.id, "purpose": "ws"}, expires_seconds=30)
+    return {"ticket": ticket}
+
+
 @router.post("/schoolapp/start")
 def schoolapp_start(body: SchoolAppStartRequest):
     # Anti-forgery state + redirect to the provider's authorize endpoint would

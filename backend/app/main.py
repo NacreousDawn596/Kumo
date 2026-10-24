@@ -85,3 +85,7 @@ app.include_router(study_sessions_router, prefix="/api")
 app.include_router(whiteboards_router, prefix="/api")
 app.include_router(collaboration_router, prefix="/api")
 app.include_router(calls_router, prefix="/api")
+
+from app.realtime.routes import router as realtime_router  # noqa: E402
+
+app.include_router(realtime_router, prefix="/api")
