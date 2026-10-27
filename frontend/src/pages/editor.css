@@ -211,3 +211,13 @@
   overflow-x: auto;
   overflow-y: hidden;
 }
+
+.editor-conflict {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: var(--text-sm);
+  margin-bottom: var(--sp-3);
+}

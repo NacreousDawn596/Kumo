@@ -75,7 +75,6 @@ def get_whiteboard(whiteboard_id: str, user: User = Depends(get_current_user), d
 
 
 class OpIn(BaseModel):
-    seq: int
     op_type: str
     payload: dict
 
@@ -87,9 +86,11 @@ def append_operations(whiteboard_id: str, ops: list[OpIn], user: User = Depends(
         raise HTTPException(status_code=404, detail="Whiteboard not found")
     for op in ops:
         db.add(WhiteboardOperation(
-            whiteboard_id=whiteboard_id, seq=op.seq, user_id=user.id,
+            whiteboard_id=whiteboard_id, user_id=user.id,
             op_type=op.op_type, payload_json=json.dumps(op.payload),
         ))
+    # The sequence is assigned by SQLite (AUTOINCREMENT) — no client-supplied
+    # order, so concurrent operations never collide.
     db.flush()
     # Rebuild snapshot deterministically from the full op log.
     elements = _replay(db, whiteboard_id)

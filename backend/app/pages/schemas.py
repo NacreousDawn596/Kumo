@@ -58,6 +58,7 @@ class PageOut(BaseModel):
     updated_at: datetime
     permission: str | None = None
     has_children: bool = False
+    version: int = 0
 
 
 class PageDetail(PageOut):

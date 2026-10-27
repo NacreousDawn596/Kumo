@@ -45,6 +45,8 @@ export default function PageEditorPage() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState([]);
+  const [version, setVersion] = useState(0);
+  const [conflict, setConflict] = useState(false);
   const initializedFor = useRef(null);
 
   const { data: page, isLoading } = useQuery({
@@ -55,6 +57,7 @@ export default function PageEditorPage() {
   useEffect(() => {
     if (page && initializedFor.current !== pageId) {
       setTitle(page.title);
+      setVersion(page.version || 0);
       setBlocks(
         page.blocks.map((b) => ({
           id: b.id,
@@ -78,11 +81,19 @@ export default function PageEditorPage() {
   });
 
   const saveBlocks = useMutation({
-    mutationFn: (bs) => api(`/api/pages/${pageId}/blocks`, { method: "PUT", body: bs }),
+    mutationFn: ({ bs, v }) =>
+      api(`/api/pages/${pageId}/blocks?expected_version=${v}`, { method: "PUT", body: bs }),
+    onSuccess: () => {
+      setConflict(false);
+      setVersion((v) => v + 1);
+    },
+    onError: (err) => {
+      if (err.status === 409) setConflict(true);
+    },
   });
 
   const debouncedSaveTitle = useRef(debounce((t) => saveTitle.mutate(t), 500)).current;
-  const debouncedSaveBlocks = useRef(debounce((bs) => saveBlocks.mutate(bs), 700)).current;
+  const debouncedSaveBlocks = useRef(debounce((bs) => saveBlocks.mutate({ bs, v: version }), 700)).current;
 
   const persist = (next) => {
     setBlocks(next);
@@ -117,6 +128,13 @@ export default function PageEditorPage() {
           <Undo2 size={14} /> Notes
         </Link>
       </div>
+
+      {conflict && (
+        <div className="editor-conflict" role="alert">
+          This page was edited by someone else. Reload to merge their changes —
+          your unsaved edits are kept here until you save again.
+        </div>
+      )}
 
       <div className="editor">
         <input

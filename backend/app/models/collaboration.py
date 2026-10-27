@@ -71,13 +71,15 @@ class Whiteboard(IdMixin, TimestampMixin, Base):
     snapshot_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class WhiteboardOperation(IdMixin, Base):
+class WhiteboardOperation(Base):
     __tablename__ = "whiteboard_operations"
 
+    # Server-assigned monotonic sequence (SQLite AUTOINCREMENT). Clients do not
+    # supply this; it guarantees a conflict-free total order for concurrent ops.
+    seq: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     whiteboard_id: Mapped[str] = mapped_column(
         ForeignKey("whiteboards.id", ondelete="CASCADE"), index=True
     )
-    seq: Mapped[int] = mapped_column(Integer, nullable=False)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     op_type: Mapped[str] = mapped_column(String(32), nullable=False)  # add|update|remove|...
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)

@@ -15,8 +15,6 @@ const TOOLS = [
   { id: "text", label: "Text", icon: Type },
 ];
 
-let seqCounter = 1;
-
 export default function WhiteboardPage() {
   const { whiteboardId } = useParams();
   const svgRef = useRef(null);
@@ -36,7 +34,6 @@ export default function WhiteboardPage() {
   useEffect(() => {
     if (wb && initializedFor.current !== whiteboardId) {
       setElements(wb.elements || []);
-      seqCounter = wb.elements.length + 1;
       initializedFor.current = whiteboardId;
     }
   }, [wb, whiteboardId]);
@@ -55,7 +52,7 @@ export default function WhiteboardPage() {
 
   const commitElement = (el) => {
     setElements((prev) => [...prev, el]);
-    const op = { seq: seqCounter++, op_type: "add", payload: el };
+    const op = { op_type: "add", payload: el };
     persist([op]);
   };
 

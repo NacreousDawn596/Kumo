@@ -24,6 +24,7 @@ class Page(IdMixin, TimestampMixin, Base):
     )
     is_archived: Mapped[bool] = mapped_column(default=False, nullable=False)
     content_md: Mapped[str | None] = mapped_column(Text, nullable=True)  # canonical markdown cache
+    version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # optimistic concurrency
 
     children: Mapped[list["Page"]] = relationship(
         back_populates="parent", cascade="all, delete-orphan", foreign_keys="Page.parent_id"

@@ -127,6 +127,7 @@ def serialize_page(db: Session, page: Page, perm: str | None) -> dict:
         "updated_at": page.updated_at,
         "permission": perm,
         "has_children": has_children,
+        "version": page.version,
     }
 
 
@@ -181,6 +182,7 @@ def update_blocks(db: Session, page: Page, blocks: list[dict], user: User) -> li
     for bid, block in existing.items():
         if bid not in new_ids:
             block.deleted = True
+    page.version += 1
     return result
 
 

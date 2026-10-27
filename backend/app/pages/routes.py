@@ -96,8 +96,16 @@ def delete_page(page_id: str, user: User = Depends(get_current_user), db: Sessio
 
 
 @router.put("/{page_id}/blocks", response_model=list[BlockOut])
-def put_blocks(page_id: str, blocks: list[BlockIn], user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def put_blocks(
+    page_id: str,
+    blocks: list[BlockIn],
+    expected_version: int | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     page = service.require_page(db, user, page_id, "edit")
+    if expected_version is not None and expected_version != page.version:
+        raise HTTPException(status_code=409, detail="Page was modified by someone else; refresh to merge.")
     result = service.update_blocks(db, page, [b.model_dump(exclude_unset=True) for b in blocks], user)
     db.commit()
     for b in result:

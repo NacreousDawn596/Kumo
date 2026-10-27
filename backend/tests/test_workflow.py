@@ -85,8 +85,8 @@ def test_full_collaboration_workflow():
     # Both edit a shared whiteboard.
     wb = alice.post("/api/whiteboards", json={"name": "FBD", "group_id": group_id}).json()
     wb_id = wb["id"]
-    alice.post(f"/api/whiteboards/{wb_id}/operations", json=[{"seq": 1, "op_type": "add", "payload": {"id": "e1", "type": "rect", "x": 0, "y": 0}}])
-    bob.post(f"/api/whiteboards/{wb_id}/operations", json=[{"seq": 2, "op_type": "add", "payload": {"id": "e2", "type": "arrow", "x": 10, "y": 10}}])
+    alice.post(f"/api/whiteboards/{wb_id}/operations", json=[{"op_type": "add", "payload": {"id": "e1", "type": "rect", "x": 0, "y": 0}}])
+    bob.post(f"/api/whiteboards/{wb_id}/operations", json=[{"op_type": "add", "payload": {"id": "e2", "type": "arrow", "x": 10, "y": 10}}])
     wb_after = alice.get(f"/api/whiteboards/{wb_id}").json()
     assert len(wb_after["elements"]) == 2
 

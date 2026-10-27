@@ -5,6 +5,7 @@ from collections.abc import Generator
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
@@ -25,6 +26,10 @@ def _make_engine():
         return create_engine(
             url,
             connect_args={"check_same_thread": False},
+            # NullPool: a fresh connection per operation. SQLite connections are
+            # cheap and this avoids cross-thread pool races; WAL + busy_timeout
+            # serialize concurrent writers safely.
+            poolclass=NullPool,
             pool_pre_ping=True,
         )
     return create_engine(url, pool_pre_ping=True)
@@ -40,7 +45,9 @@ if settings.database_url.startswith("sqlite"):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        # Generous lock wait: concurrent writers queue instead of erroring.
+        cursor.execute("PRAGMA busy_timeout=10000")
         cursor.close()
 
 
