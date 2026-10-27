@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileText, Plus, Users, Video } from "lucide-react";
 import { api, apiPost } from "../api/client.js";
 import { Button, EmptyState, IconButton } from "../components/ui.jsx";
+import GroupCallBar from "../components/GroupCallBar.jsx";
 import "../styles/pages.css";
 import "./sessions.css";
 
@@ -62,6 +63,8 @@ export default function StudyRoomPage() {
           </Button>
         </div>
       </div>
+
+      <GroupCallBar sessionId={sessionId} />
 
       <div className="room-grid">
         <section className="section">

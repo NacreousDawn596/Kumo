@@ -33,3 +33,42 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.group-call-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.group-call-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--success);
+  margin-right: auto;
+}
+.group-call-error {
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+.call-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+.call-btn-end {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
