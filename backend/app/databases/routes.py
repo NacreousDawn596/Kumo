@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.databases.formula import FormulaError, evaluate
 from app.models import (
     Database,
     DatabaseProperty,
@@ -36,6 +37,7 @@ class PropertyIn(BaseModel):
     name: str
     prop_type: str = "text"
     options: list[str] | None = None
+    formula: str | None = None  # for prop_type == "formula"
 
 
 class RecordIn(BaseModel):
@@ -109,14 +111,37 @@ def create_database(body: DatabaseIn, user: User = Depends(get_current_user), db
 @router.get("/{database_id}")
 def get_database(database_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     db_obj = _own(db, user, database_id)
-    props = db.execute(
-        select(DatabaseProperty).where(DatabaseProperty.database_id == database_id).order_by(DatabaseProperty.position)
-    ).scalars().all()
+    props = list(
+        db.execute(
+            select(DatabaseProperty).where(DatabaseProperty.database_id == database_id).order_by(DatabaseProperty.position)
+        ).scalars()
+    )
     records = db.execute(
         select(DatabaseRecord).where(DatabaseRecord.database_id == database_id).order_by(DatabaseRecord.created_at)
     ).scalars().all()
-    recs = [_record_out(r, _record_values(db, r.id)) for r in records]
-    return _db_out(db_obj, list(props), recs)
+
+    formula_props = []
+    for p in props:
+        if p.prop_type == "formula":
+            try:
+                opts = json.loads(p.options) if p.options else {}
+                formula_props.append((p, opts.get("expression", "")))
+            except (ValueError, TypeError):
+                formula_props.append((p, ""))
+
+    name_by_id = {p.id: p.name for p in props}
+    recs = []
+    for r in records:
+        values = _record_values(db, r.id)
+        if formula_props:
+            context = {name_by_id[pid]: v for pid, v in values.items() if pid in name_by_id}
+            for p, expr in formula_props:
+                try:
+                    values[p.id] = evaluate(expr, context)
+                except FormulaError:
+                    values[p.id] = None
+        recs.append(_record_out(r, values))
+    return _db_out(db_obj, props, recs)
 
 
 @router.post("/{database_id}/properties", status_code=status.HTTP_201_CREATED)
@@ -125,9 +150,12 @@ def add_property(database_id: str, body: PropertyIn, user: User = Depends(get_cu
     if body.prop_type not in PROPERTY_TYPES:
         raise HTTPException(status_code=400, detail="Invalid property type")
     count = db.execute(select(DatabaseProperty).where(DatabaseProperty.database_id == database_id)).scalars().all()
+    opts = body.options if body.options else None
+    if body.prop_type == "formula":
+        opts = json.dumps({"expression": body.formula or ""})
     prop = DatabaseProperty(
         database_id=database_id, name=body.name, prop_type=body.prop_type,
-        options=json.dumps(body.options) if body.options else None,
+        options=json.dumps(opts) if opts else None,
         position=len(count),
     )
     db.add(prop)

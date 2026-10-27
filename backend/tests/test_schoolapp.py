@@ -17,9 +17,11 @@ def test_hmac_token_roundtrip():
 def test_hmac_token_tamper_rejected():
     secret = "test-shared-secret"
     token = sign_hmac_token({"sub": "12345"}, secret, 120)
-    tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+    # Tamper a character in the middle of the signature (reliably invalidates it).
+    payload, sig = token.split(".")
+    tampered_sig = sig[: len(sig) // 2] + ("A" if sig[len(sig) // 2] != "A" else "B") + sig[len(sig) // 2 + 1 :]
     try:
-        verify_hmac_token(tampered, secret)
+        verify_hmac_token(f"{payload}.{tampered_sig}", secret)
         assert False, "should have raised"
     except ValueError:
         pass
