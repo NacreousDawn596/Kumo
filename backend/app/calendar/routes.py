@@ -190,6 +190,63 @@ def export_ics(user: User = Depends(get_current_user), db: Session = Depends(get
     return Response(content=ics, media_type="text/calendar", headers={"Content-Disposition": 'attachment; filename="kumo.ics"'})
 
 
+def _parse_ics_datetime(value: str) -> datetime | None:
+    from datetime import timezone as _tz
+
+    value = value.strip()
+    if len(value) >= 8 and value[8:9] == "T":
+        try:
+            dt = datetime.strptime(value[:15], "%Y%m%dT%H%M%S")
+        except ValueError:
+            return None
+        if value.endswith("Z"):
+            return dt.replace(tzinfo=_tz.utc)
+        return dt
+    # All-day date: YYYYMMDD
+    try:
+        return datetime.strptime(value[:8], "%Y%m%d")
+    except ValueError:
+        return None
+
+
+class ImportBody(BaseModel):
+    content: str
+
+
+@router.post("/import")
+def import_ics(body: ImportBody, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    blocks = [b for b in body.content.split("BEGIN:VEVENT")[1:]]
+    if not blocks:
+        raise HTTPException(status_code=400, detail="No VEVENT blocks found")
+    created = 0
+    for block in blocks:
+        block = block.split("END:VEVENT", 1)[0]
+        props: dict[str, str] = {}
+        for line in block.splitlines():
+            if ":" not in line:
+                continue
+            name, _, value = line.partition(":")
+            props[name.split(";")[0].strip().upper()] = value.strip()
+        start = _parse_ics_datetime(props.get("DTSTART", ""))
+        if start is None:
+            continue
+        end = _parse_ics_datetime(props.get("DTEND", "")) if props.get("DTEND") else None
+        event = CalendarEvent(
+            title=props.get("SUMMARY") or "Imported event",
+            description=props.get("DESCRIPTION"),
+            start_at=start,
+            end_at=end,
+            all_day=bool(props.get("DTSTART") and len(props["DTSTART"]) == 8),
+            location=props.get("LOCATION"),
+            organizer_id=user.id,
+            recurrence=props.get("RRULE"),
+        )
+        db.add(event)
+        created += 1
+    db.commit()
+    return {"imported": created}
+
+
 @router.get("/{event_id}")
 def get_event(event_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     event = db.get(CalendarEvent, event_id)

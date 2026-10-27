@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addDays,
@@ -31,6 +31,7 @@ const VIEWS = [
 
 export default function CalendarPage() {
   const queryClient = useQueryClient();
+  const importRef = useRef(null);
   const [view, setView] = useState("month");
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -70,6 +71,15 @@ export default function CalendarPage() {
     },
   });
 
+  const onImport = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const content = await file.text();
+    await apiPost("/api/calendar/import", { content });
+    queryClient.invalidateQueries({ queryKey: ["events"] });
+  };
+
   const label = view === "month" ? format(month, "MMMM yyyy")
     : view === "week" ? `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`
     : view === "day" ? format(day, "EEEE, MMMM d")
@@ -106,6 +116,9 @@ export default function CalendarPage() {
           <Button variant="ghost" icon={ChevronLeft} onClick={prev} />
           <Button variant="ghost" onClick={() => { setMonth(startOfMonth(new Date())); setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 })); setDay(new Date()); }}>Today</Button>
           <Button variant="ghost" icon={ChevronRight} onClick={next} />
+          <Button variant="ghost" onClick={() => { window.location.href = "/api/calendar/export.ics"; }}>Export</Button>
+          <Button variant="ghost" onClick={() => importRef.current?.click()}>Import</Button>
+          <input ref={importRef} type="file" accept=".ics,text/calendar" hidden onChange={onImport} />
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>Event</Button>
         </div>
       </div>
