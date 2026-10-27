@@ -78,6 +78,19 @@ def get_avatar(user_id: str, db: Session = Depends(get_db)):
     return FileResponse(path)
 
 
+@router.post("/me/caldav-password")
+def rotate_caldav_password(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Issue a fresh CalDAV credential (regenerates and returns the plaintext).
+
+    Only the hash is stored; the plaintext is shown once here so the user can
+    configure an external calendar client.
+    """
+    from app.auth.service import rotate_caldav_password as _rotate
+
+    token = _rotate(db, user)
+    return {"username": user.username, "password": token}
+
+
 @router.get("/search", response_model=list[UserPublic])
 def search_users(
     q: str = Query(min_length=1, max_length=64),

@@ -214,7 +214,9 @@ interface is designed so an S3-compatible backend can replace local files later.
   ICS import.
 - **Authentication** — HTTP Basic auth against the account's local password
   (Argon2id); a custom **rights backend** enforces per-user isolation (each
-  user owns only `/{username}/calendar/`).
+  user owns only `/{username}/calendar/`). SchoolApp-only accounts are
+  automatically provisioned a random 32-character credential that is
+  **rotated on every login** (regenerate it from Settings → CalDAV).
 - **Create, update, delete, and read** from CalDAV clients are reflected in the
   app (and vice versa) on the next read, including **recurring (RRULE)**, and
   **all-day** events.

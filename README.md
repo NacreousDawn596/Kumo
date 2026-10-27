@@ -75,6 +75,9 @@ Connect an external calendar client with your Kumo email/password:
 The client auto-discovers your calendar via `/.well-known/caldav`. Events you
 create or edit in the app appear in the client, and vice versa.
 
+**SchoolApp sign-in**: since you never type a password manually, generate one
+under **Settings → CalDAV** (the token is rotated every time you sign in).
+
 ## Tests
 
 ```sh

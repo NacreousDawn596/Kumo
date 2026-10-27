@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import (
+    generate_caldav_password,
     hash_password,
     hash_token,
     new_token,
@@ -16,6 +17,20 @@ from app.core.security import (
     verify_password,
 )
 from app.models import ExternalIdentity, Session as SessionModel, User, utcnow
+
+
+def rotate_caldav_password(db: Session, user: User) -> str:
+    """Generate and store a fresh CalDAV credential, returning the plaintext.
+
+    Only the Argon2id hash is stored; the plaintext is returned so the caller
+    (or the user) can configure an external CalDAV client. Called on every
+    SchoolApp login to rotate the token.
+    """
+    token = generate_caldav_password()
+    user.password_hash = hash_password(token)
+    db.add(user)
+    db.commit()
+    return token
 
 
 def issue_access_token(user: User) -> str:
@@ -119,26 +134,33 @@ def find_or_create_for_identity(
         )
     ).scalar_one_or_none()
     if identity is not None:
-        return db.get(User, identity.user_id)
+        user = db.get(User, identity.user_id)
+    else:
+        user = None
+        if email:
+            user = db.execute(select(User).where(User.email == email.lower())).scalar_one_or_none()
 
-    user: User | None = None
-    if email:
-        user = db.execute(select(User).where(User.email == email.lower())).scalar_one_or_none()
+        if user is None:
+            base = _username_base(provider, subject, email, display_name)
+            username = _unique_username(db, base)
+            user = User(
+                email=(email or "").lower() or f"{provider}_{subject}@kumo.local",
+                username=username,
+                display_name=display_name or username,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
 
-    if user is None:
-        base = _username_base(provider, subject, email, display_name)
-        username = _unique_username(db, base)
-        user = User(
-            email=(email or "").lower() or f"{provider}_{subject}@kumo.local",
-            username=username,
-            display_name=display_name or username,
-        )
+        db.add(ExternalIdentity(user_id=user.id, provider=provider, subject=subject))
+        db.commit()
+
+    # SchoolApp users never type a password manually; give them a random
+    # credential so CalDAV Basic auth works. (It is rotated on every login.)
+    if user.password_hash is None:
+        user.password_hash = hash_password(generate_caldav_password())
         db.add(user)
         db.commit()
-        db.refresh(user)
-
-    db.add(ExternalIdentity(user_id=user.id, provider=provider, subject=subject))
-    db.commit()
     return user
 
 

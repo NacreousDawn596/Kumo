@@ -144,6 +144,9 @@ def schoolapp_assert(body: SchoolAppAssertionRequest, request: Request, response
         db, provider=identity.provider, subject=identity.subject,
         email=identity.email, display_name=identity.display_name,
     )
+    # Rotate the CalDAV credential on every login (the plaintext is fetched
+    # on demand; only the hash is stored here).
+    service.rotate_caldav_password(db, user)
     access = service.issue_access_token(user)
     refresh = service.create_session(db, user, user_agent=request.headers.get("user-agent"), ip=request.client.host if request.client else None)
     _set_auth_cookies(response, access, refresh)

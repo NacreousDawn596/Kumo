@@ -266,3 +266,56 @@ def test_sync_collection(alice):
     assert r.status_int == 207
     assert "evt-s%40test" in r.text
     assert "sync-token" in r.text
+
+
+def test_schoolapp_user_gets_caldav_password():
+    from app.auth.service import find_or_create_for_identity, rotate_caldav_password
+
+    with SessionLocal() as db:
+        user = find_or_create_for_identity(
+            db, provider="schoolapp", subject="SA-1", email="s1@kumo.test", display_name="S1"
+        )
+        # Provisioned with a password hash so CalDAV Basic auth works.
+        assert user.password_hash is not None
+        first = user.password_hash
+        # Rotated on every login.
+        rotate_caldav_password(db, user)
+        assert user.password_hash != first
+
+
+def test_caldav_password_token_authenticates():
+    from app.auth.service import find_or_create_for_identity, rotate_caldav_password
+
+    with SessionLocal() as db:
+        user = find_or_create_for_identity(
+            db, provider="schoolapp", subject="SA-2", email="s2@kumo.test", display_name="S2"
+        )
+        token = rotate_caldav_password(db, user)
+        username = user.username
+
+    dav = _build_dav_app()
+    dav.authorization = ("Basic", (username, token))
+    r = dav.request(f"/{username}/", method="PROPFIND", headers={"Depth": "0"}, status="*")
+    assert r.status_int == 207
+
+
+def test_caldav_password_endpoint_returns_plaintext(client):
+    from app.auth.service import rotate_caldav_password
+    from app.models import User
+
+    client.post(
+        "/api/auth/register",
+        json={"email": "cal@example.com", "username": "caluser", "display_name": "Cal", "password": PASSWORD},
+    )
+    r = client.post("/api/users/me/caldav-password")
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["password"]) == 32
+    assert body["username"] == "caluser"
+
+    # The returned token now authenticates against CalDAV.
+    dav = _build_dav_app()
+    dav.authorization = ("Basic", ("caluser", body["password"]))
+    rr = dav.request("/caluser/", method="PROPFIND", headers={"Depth": "0"}, status="*")
+    assert rr.status_int == 207
+

@@ -37,6 +37,16 @@ def new_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+def generate_caldav_password() -> str:
+    """A random, unguessable credential for CalDAV Basic auth.
+
+    SchoolApp users never type a password manually; this 32-character token is
+    what their external calendar client uses. It is one-way hashed before
+    storage and rotated on every login.
+    """
+    return secrets.token_urlsafe(24)
+
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 

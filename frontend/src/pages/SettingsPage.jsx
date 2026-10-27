@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 import { Bell, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useAuth } from "../store/auth.js";
 import { useTheme } from "../store/theme.js";
-import { apiPatch } from "../api/client.js";
+import { apiPatch, apiPost } from "../api/client.js";
 import { Avatar, Button, Input, Textarea } from "../components/ui.jsx";
 import StorageMeter from "../components/StorageMeter.jsx";
 import { registerAndSubscribe, unsubscribe } from "../lib/push.js";
@@ -17,6 +17,7 @@ const SECTIONS = [
   { id: "notifications", label: "Notifications" },
   { id: "profile", label: "Profile" },
   { id: "storage", label: "Storage" },
+  { id: "caldav", label: "CalDAV" },
   { id: "account", label: "Account" },
 ];
 
@@ -41,6 +42,7 @@ export default function SettingsPage() {
         {section === "notifications" && <NotificationsSection />}
         {section === "profile" && <ProfileSection />}
         {section === "storage" && <StorageSection />}
+        {section === "caldav" && <CalDAVSection />}
         {section === "account" && <AccountSection />}
       </div>
     </div>
@@ -217,6 +219,55 @@ function AccountSection() {
         <Button variant="secondary" icon={LogOut} onClick={logout}>
           Sign out
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function CalDAVSection() {
+  const { user } = useAuth();
+  const [creds, setCreds] = useState(null);
+
+  const issue = useMutation({
+    mutationFn: () => apiPost("/api/users/me/caldav-password", {}),
+    onSuccess: (d) => setCreds(d),
+  });
+
+  const serverUrl = `${window.location.origin}/caldav/`;
+
+  return (
+    <div>
+      <h1 className="page-title">CalDAV</h1>
+      <p className="page-subtitle">
+        Sync your Kumo calendar with an external client (Apple Calendar,
+        Thunderbird, GNOME Calendar, …).
+      </p>
+
+      <div className="settings-form" style={{ marginTop: 12 }}>
+        <label className="auth-label">
+          Server URL
+          <Input readOnly value={serverUrl} onFocus={(e) => e.target.select()} />
+        </label>
+        <p className="page-subtitle">
+          Your password is a generated token (never used for signing in). It is
+          rotated whenever you sign in, so generate a fresh one here before
+          adding the account to a client.
+        </p>
+        <Button variant="primary" loading={issue.isPending} onClick={() => issue.mutate()} style={{ alignSelf: "flex-start" }}>
+          Generate password
+        </Button>
+        {creds && (
+          <div className="caldav-creds">
+            <label className="auth-label">
+              Username
+              <Input readOnly value={creds.username || user?.email} onFocus={(e) => e.target.select()} />
+            </label>
+            <label className="auth-label">
+              Password (copy now — it is only shown once)
+              <Input readOnly value={creds.password} onFocus={(e) => e.target.select()} />
+            </label>
+          </div>
+        )}
       </div>
     </div>
   );
