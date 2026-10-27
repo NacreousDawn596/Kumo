@@ -1,223 +1,472 @@
 # Kumo — Features
 
-Kumo is a unified engineering workspace: communication, notes, files, tasks,
-calendar, and collaborative study tools in one connected environment. This
-document is a factual inventory of what the application does today — organized
-so PR reviewers and stakeholders can evaluate it quickly.
+**Kumo** is a unified engineering workspace for students and collaborative
+learning communities. It brings communication, notes, knowledge management,
+files, tasks, calendar, databases, and collaborative study tools into one
+connected environment.
 
-Everything listed under **"Included"** is implemented and running. A short
-**"Not yet implemented"** section at the end states honestly what is not there,
-so no one has to guess.
+This document is a **detailed, factual inventory** of what the application
+actually does today. It is written for two audiences:
+
+- **PR reviewers** — to understand scope, architecture, and security posture.
+- **Stakeholders / pitch decks** — to see the full feature set at a glance.
+
+Everything under **"Implemented"** is real and running. A precise
+**"Not yet implemented"** section at the end states exactly what is missing, so
+nothing is overstated.
+
+---
+
+## Contents
+
+1. [Identity & authentication](#1-identity--authentication)
+2. [Home](#2-home)
+3. [Notes & knowledge](#3-notes--knowledge)
+4. [Vault (files)](#4-vault-files)
+5. [Tasks, projects & calendar](#5-tasks-projects--calendar)
+6. [Communication](#6-communication)
+7. [Study rooms & collaboration](#7-study-rooms--collaboration)
+8. [Structured databases](#8-structured-databases)
+9. [Chemistry](#9-chemistry)
+10. [Search & navigation](#10-search--navigation)
+11. [Notifications](#11-notifications)
+12. [Settings & personalization](#12-settings--personalization)
+13. [Design system](#13-design-system)
+14. [Platform & operations](#14-platform--operations)
+15. [Security](#15-security)
+16. [API surface](#16-api-surface)
+17. [Testing](#17-testing)
+18. [Not yet implemented](#18-not-yet-implemented)
 
 ---
 
 ## 1. Identity & authentication
 
-**Included**
+**Sign-in methods**
 
-- **SchoolApp single sign-on** — the primary sign-in. A deployed Cloudflare
-  Worker verifies the student's SchoolApp identity (via `schoolapp.js`) and
-  returns a short-lived (120s), HMAC-signed assertion that the backend
-  verifies. The student's SchoolApp password is used once and never stored.
-- **Local email/password accounts** — available on the backend API
-  (Argon2id hashing) for development and testing; not exposed in the UI.
-- **Rotating refresh sessions** — refresh tokens are random, stored only as
-  SHA-256 hashes, rotated on each refresh, and revocable server-side. Access
-  tokens are short-lived and signed.
-- **HttpOnly / SameSite cookies**, `Secure` in production.
+- **SchoolApp single sign-on (primary).** A deployed Cloudflare Worker verifies
+  the student's SchoolApp identity through `schoolapp.js` and returns a
+  **short-lived (120 s), audience-restricted, HMAC-SHA256-signed assertion**.
+  The backend verifies the signature, issuer (`schoolapp-worker`), audience
+  (`kumo`), and expiry. The student's SchoolApp password is used once, never
+  logged, and never stored.
+- **Local email/password accounts.** Backend-only (Argon2id hashing) for
+  development, tests, and the mock-user seeder. Not shown in the sign-in UI.
+
+**Session model**
+
+- **Access tokens** — short-lived (15 min), HMAC-signed, carried in an HttpOnly
+  cookie (or `Authorization: Bearer` for API/tests).
+- **Refresh tokens** — 256-bit random values, stored only as SHA-256 hashes,
+  **rotated on every refresh**, revocable server-side, with reuse detection.
+- **Cookies** — `HttpOnly`, `SameSite=Lax` (configurable), `Secure` in
+  production.
 - **Logout** and **revoke-all-sessions**.
-- **WebSocket auth** — realtime connections authenticate via a one-time 30s
-  ticket, not the HttpOnly cookie.
+- **WebSocket authentication** — realtime sockets authenticate with a one-time
+  30-second ticket (so the HttpOnly access cookie is never exposed to JS).
 
-**Profiles** — display name, bio, study interests, time zone, theme, language.
+**Profiles**
+
+- Editable: display name, bio, study interests, time zone, theme, language.
+- Stable internal IDs and unique normalized usernames.
+- Profile photos are not uploaded in this version (placeholder avatars from the
+  display name).
 
 ---
 
 ## 2. Home
 
-- Contextual greeting (name + time-of-day) and today's date.
-- **Today's schedule**, **tasks**, **recent notes**, **recent documents**,
-  **study rooms**, and **recent conversations** — all from real data.
-- A first-use "set up your workspace" introduction that disappears once the
-  user has content.
-- Actionable empty states (e.g. "Nothing scheduled for today" → "Add event").
+A personal working surface, driven entirely by real data:
+
+- Contextual greeting (first name + time-of-day) and today's date.
+- **Today's schedule**, **tasks requiring attention**, **recent notes**,
+  **recent documents**, **active study rooms**, and **recent conversations**.
+- A **first-use introduction** ("set up your workspace") that disappears once
+  the user has any content.
+- **Actionable empty states** — each empty section states what it is and offers
+  one relevant action (e.g. "Nothing scheduled for today" → "Add event").
+- Header actions: **New note** (primary) and **New task**.
 
 ---
 
 ## 3. Notes & knowledge
 
-**Pages** — a block-based editor with a calm writing surface.
+### Pages
 
-- Block types: paragraph, heading, bulleted list, numbered list, checklist,
-  quote, code block, divider, and **LaTeX equation** (KaTeX rendering).
-- **Templates** — lecture notes, course page, meeting notes, lab report, and
-  study-session notes (seed a page with a structured block layout).
-- Nested page hierarchy (parent/child) and quick navigation.
-- **Internal links** between pages (stable IDs — renaming doesn't break links)
-  and an automatic **backlinks** list on each page.
-- Autosave (debounced) that flushes on blur and on navigation, so edits are
-  not lost when leaving a page.
-- Markdown rendering with GFM tables, math, and a sanitization pipeline
-  (`rehype-sanitize`) — untrusted content is never rendered as raw HTML.
+A block-based editor with a distraction-free writing surface.
 
-**Knowledge graph** — an interactive, authorization-aware graph of real page
-links (pan/zoom, click-to-open), plus a global search.
+**Block types (9):**
+
+| Block | Notes |
+|-------|-------|
+| Paragraph | — |
+| Heading | Renders large/bold |
+| Bulleted list | — |
+| Numbered list | — |
+| Checklist (todo) | With checkbox |
+| Quote | — |
+| Code block | Monospace, preserved whitespace |
+| Divider | Horizontal rule |
+| Equation | **LaTeX**, rendered with KaTeX |
+
+**Editing behavior**
+
+- Blocks have stable IDs and are saved individually; the page is never saved
+  destructively on every keystroke.
+- **Autosave** is debounced and flushes on **blur** and on **navigation /
+  unmount / beforeunload**, so edits are not lost when leaving a page.
+- Keyboard: Enter inserts a block, Backspace on an empty block deletes it, a
+  per-block menu switches the block type.
+- Markdown rendering supports GFM tables, task lists, and math; rendered output
+  is passed through `rehype-sanitize` (untrusted content is never raw HTML).
+
+**Templates (5)** — seed a page with a structured block layout:
+
+- Lecture notes
+- Course page
+- Meeting notes
+- Lab report
+- Study-session notes
+
+**Hierarchy & links**
+
+- Nested pages (parent/child), breadcrumbs, and quick navigation.
+- **Internal links** between pages use stable IDs — renaming a page never
+  breaks inbound links.
+- **Backlinks** — every page lists the other pages that link to it (respecting
+  access controls; private pages never leak their existence through backlinks).
+- Page permissions are private by default with explicit sharing.
+
+### Knowledge graph
+
+- An interactive, **authorization-aware** graph of real `page → page` links.
+- Pan/zoom, click a node to open the page, and a depth limit to keep large
+  graphs readable.
+- Backed by persisted relationships, not decorative random data.
 
 ---
 
 ## 4. Vault (files)
 
-- Upload (streamed, size-limited), download, and inline preview (PDF, images,
-  text/Markdown/CSV).
-- Grid presentation with file metadata.
-- **Sharing** with individual users, groups, and study sessions, with graded
-  permissions (view / download / comment / annotate / collaborate / manage).
-- **Public / private sharing** — any file can be toggled public with an
-  unguessable share link (`/public/files/{token}`); read-only and revocable.
-- **Comments** on files.
+- **Upload** (streamed, size-limited to 50 MB/file), **download**, and **inline
+  preview** for PDF, images, and text/Markdown/CSV.
+- Grid presentation with file metadata (size, date, type).
+- **Storage quota: 500 MB per user**, counting owned files *and* files linked
+  (shared) to you, with a live usage meter.
+
+**Sharing & permissions (7 graded levels)**
+
+`view` → `download` → `comment` → `annotate` → `collaborate` → `edit` → `manage`
+
+- Share with **individual users**, **groups**, or **study sessions**.
+- **Public / private links** — any file can be toggled public with an
+  unguessable 128-bit token (`/public/files/{token}`); public access is
+  read-only and revocable.
+- **Comments** on files (with optional page/anchor).
 - **Ownership transfer** — hand a file to another student; edits, comments,
-  versions, and annotations are preserved (only the owner changes).
-- **Unlink** a file shared with you to free quota without deleting it.
-- **Storage quota** — 500 MB per user, counting owned files *and* linked files,
-  with a live usage meter.
+  versions, and annotations are all preserved (only the owner changes).
+- **Unlink** a file shared with you to free quota without deleting the
+  underlying file.
+
+**Storage** — binary contents live in a dedicated persistent storage layer
+(traversal-safe, sharded paths) separate from the database; the storage
+interface is designed so an S3-compatible backend can replace local files later.
 
 ---
 
 ## 5. Tasks, projects & calendar
 
-- **Tasks** — title, description, status, priority, due date, assignee, and
-  project/group association; list view with completion states.
-- **Projects** — project workspaces with their own task list.
-- **Calendar** — **month / week / day / agenda** views; events and **task
-  deadlines** overlaid; event creation, participants, and responses; events
-  can link to a study session.
+### Tasks
+
+- Title, description, status (`todo` / `in_progress` / `done` / `cancelled`),
+  priority, due date, start date, assignee, project, and group.
+- List view grouped by status, with completion states.
+- Task deadlines also appear **on the calendar**.
+
+### Projects
+
+- Lightweight workspaces with name, description, and a member list.
+- Each project has its own page with its **task list** (add, toggle done).
+
+### Calendar
+
+- **Four views: month, week, day, agenda**, with a view switcher and
+  prev/today/next navigation.
+- Events: title, description, start/end, all-day, time zone, location,
+  participants (with accept/decline/tentative responses), and an optional
+  study-session link.
+- **Task deadlines** are overlaid on their due dates.
 - **Recurring events** — RFC 5545 RRULE strings (e.g. `FREQ=WEEKLY;BYDAY=MO`)
-  are expanded across the calendar.
-- **ICS export** — download the user's events as an `.ics` file.
+  are validated and expanded across the calendar.
+- **ICS export** — download the user's events as a standards-compliant `.ics`.
 
 ---
 
 ## 6. Communication
 
+### Messaging
+
 - **Direct messages** and **group conversations**.
-- Message history with pagination, editing, deletion, replies, and reactions.
-- Unread counters and read receipts.
-- **Realtime** delivery over WebSocket (presence + message events) — messages
-  appear to other participants immediately.
-- **1:1 audio calls** — peer-to-peer WebRTC with WebSocket signaling (call,
-  accept, mute, hang up) directly from a conversation.
-- **Groups** — name/description, owner/admin/moderator/member/viewer roles,
-  membership management, group vault, and group chat (membership stays in sync
-  with the group conversation).
-- **Invitations** — invite by user, or generate a **shareable invite link**;
-  join-requests go through an **approve/reject** flow (with a full UI).
+- Message history with pagination, **editing**, **deletion**, **replies**, and
+  **reactions** (reactions are persisted in the API; there is no reaction
+  picker UI yet).
+- **Unread counters** and **read receipts**.
+- **Realtime** delivery over WebSocket — sent messages appear to other
+  participants immediately (the send endpoint also broadcasts a room event).
+- Attachments/link previews are represented in the data model (link resource
+  references) but not fully surfaced in the UI.
+
+### 1:1 audio calls
+
+- Peer-to-peer **WebRTC** with WebSocket signaling.
+- Call, accept, **mute/unmute**, and hang up — directly from a conversation.
+- Uses a STUN server; TURN is configurable but not provisioned by default.
+- No call recording.
+
+### Groups
+
+- Name, description, and **5 roles**: `owner`, `admin`, `moderator`,
+  `member`, `viewer`.
+- Membership management, group vault, and **group chat** (group membership and
+  conversation membership are kept in sync automatically).
+- **Invitations** — invite a user directly, or generate a **shareable invite
+  link**; join requests go through an **approve/reject** flow with a full UI.
+
+### Group audio (SFU)
+
+- A **LiveKit** adapter is wired: a token endpoint mints signed LiveKit access
+  tokens, and a Docker service + config are provided. Actual group-call media
+  requires the LiveKit server to be deployed and a `livekit-client` join flow
+  (see [Not yet implemented](#18-not-yet-implemented)).
 
 ---
 
 ## 7. Study rooms & collaboration
 
-- **Study rooms** — a session ties together participants, whiteboards, and
-  linked documents; each room has its own view.
-- **Whiteboards** — infinite canvas with pen, rectangle, arrow, text, eraser,
-  select, pan, and a **chemistry drawing tool** (place atoms + draw bonds);
-  **undo/redo** (Ctrl+Z / Ctrl+Y) and keyboard tool shortcuts. Operations use a
-  server-assigned sequence so concurrent edits merge without conflict.
-- **Collaborative PDF** — PDF.js rendering with a separate annotation layer
-  (pen, highlighter, eraser, undo/redo); the source PDF stays immutable.
-- **Invite links** for study rooms.
+### Study rooms
+
+- A session ties together **participants**, **whiteboards**, and **linked
+  documents**; each room has its own view.
+- **Invite links** for rooms; members can join directly.
+
+### Whiteboards
+
+An infinite, collaborative canvas.
+
+- **Tools (8):** Select (V), Pan (H), Pen (P), Eraser (E), Rectangle (R),
+  Arrow (A), Text (T), and **Chemistry** (C — place atoms, draw bonds).
+- **Undo / Redo** with buttons and `Ctrl+Z` / `Ctrl+Y` (plus `Ctrl+Shift+Z`).
+- Keyboard tool shortcuts and `Delete`/`Escape` for selection.
+- **Conflict-free concurrency** — every operation gets a server-assigned
+  monotonic sequence, so concurrent edits merge without collision; the canvas
+  is rebuilt deterministically from the operation log.
+- Pan (drag) and zoom (scroll).
+
+### Collaborative PDF
+
+- **PDF.js** rendering with a **separate annotation layer** — the source PDF is
+  never modified.
+- Tools: **pen**, **highlighter**, **eraser**, with **undo/redo** and keyboard
+  shortcuts.
+- Annotations are persisted per-page with normalized coordinates, so they stay
+  aligned across zoom levels and devices.
 
 ---
 
-## 8. Search & navigation
+## 8. Structured databases
 
-- **Global search** across pages, files, tasks, groups, **and people**
-  (users), respecting access controls.
-- **Command palette** (Ctrl/Cmd + K) for search and quick actions (create
-  note/task/event, open graph, start a session, settings, …).
-- **Quick capture** from the sidebar for a note, task, or calendar event.
+Collections of typed records (Notion-style), for courses, assignments, research
+papers, and lab data.
 
----
-
-## 9. Notifications
-
-- In-app notification center (list, unread badge, mark-read / mark-all-read).
-- **Browser push notifications** — service worker + VAPID subscription, with a
-  toggle in Settings (requires VAPID keys on the server to actually deliver).
-
----
-
-## 10. Structured databases
-
-- **Databases** — collections of typed records with configurable properties
-  (text, number, checkbox, select, date, URL, relation, formula).
-- **Table view** with inline cell editing, add/delete rows and properties.
-- **Formula properties** — a safe, constrained expression evaluator
-  (`score * 0.3`, `max(a, b)`, …) that references other properties; arbitrary
-  code, imports, and attribute access are rejected.
+- **Property types (11):** `title`, `text`, `number`, `checkbox`, `select`,
+  `multi_select`, `date`, `person`, `url`, `relation`, `formula`.
+- **Table view** with inline cell editing, and add/delete rows and properties.
+- **Formula properties** — a safe, constrained expression evaluator that
+  references other properties by name. Supports arithmetic, comparison,
+  `if`/`else` expressions, and functions (`abs`, `round`, `min`, `max`, `sum`,
+  `len`, `sqrt`, `floor`, `ceil`). Parsing uses a whitelisted `ast` — arbitrary
+  code, imports, and attribute access are **rejected**.
+- Board/gallery/calendar views are not implemented yet (table only).
 
 ---
 
-## 11. Chemistry
+## 9. Chemistry
 
-- **SMILES input** with a gallery of example molecules (ethanol, benzene,
-  caffeine, glucose, …).
-- **Chemical verification** via RDKit — invalid SMILES are rejected; the
-  formula, molecular weight, and formal charges are computed and shown.
-- **3D structure viewer** (Three.js) — atoms colored with **CPK colors**,
-  single/double/triple bonds, drag-to-rotate, scroll-to-zoom, and a **spin**
-  toggle.
-- A chemistry drawing tool in the whiteboard (place atoms, draw bonds).
+A molecular tool powered by **RDKit** (server-side cheminformatics).
+
+- **SMILES input** with an example gallery (ethanol, benzene, caffeine, acetic
+  acid, glucose, ammonium).
+- **Chemical verification** — invalid SMILES are rejected; the molecular
+  **formula**, **molecular weight**, **formal charge**, and heavy-atom/bond
+  counts are computed and shown.
+- **3D structure viewer** (Three.js):
+  - Atoms rendered as spheres with **CPK colors** (C grey, O red, N blue, H
+    white, S yellow, P orange, halogens green/brown/purple, metals per Jmol).
+  - **Single / double / triple bonds** as parallel cylinders.
+  - **Drag to rotate, scroll to zoom, and a spin toggle.**
+- 3D coordinates are generated by RDKit (ETKDG embedding + MMFF force-field
+  optimization), not fabricated.
+- A basic atom/bond drawing tool also lives in the whiteboard.
+
+---
+
+## 10. Search & navigation
+
+- **Global search** across **pages, files, tasks, groups, and people** — with
+  access control applied before results are returned.
+- **Command palette** (`Ctrl/Cmd + K`): search plus quick actions (create
+  note/task/event, start a session, open the knowledge graph, settings, …).
+- **Quick capture** (from the sidebar) for a note, task, or calendar event.
+
+---
+
+## 11. Notifications
+
+- **In-app notification center** — list, unread badge, mark-read, mark-all-read.
+- **Browser push notifications** — a service worker + VAPID subscription flow
+  with a Settings toggle. Delivery requires the server's VAPID keys to be
+  configured (see [Not yet implemented](#18-not-yet-implemented)).
 
 ---
 
 ## 12. Settings & personalization
 
-- **Appearance** — light / dark / system theme; **8 accent colors**
-  (purple, blue, indigo, teal, green, orange, rose, cyan), each rendered in
-  light and dark (16 combinations); **corner-radius** and **text-size**
-  sliders, applied live and persisted.
-- **Notifications** — browser-push toggle.
-- **Profile**, **Storage** (quota usage), and **Account** (sign-out).
+Categorized settings navigation with five sections:
+
+| Section | Controls |
+|---------|----------|
+| **Appearance** | Theme mode (light / dark / system); 8 accent colors; corner-radius slider (50–200%); text-size slider (85–140%). All live-previewed and persisted. |
+| **Notifications** | Browser-push toggle. |
+| **Profile** | Display name, bio, time zone. |
+| **Storage** | Quota usage meter (owned + linked bytes). |
+| **Account** | Signed-in identity, sign out. |
 
 ---
 
-## 13. Platform & operations
-- **Stack** — React (Vite) frontend; FastAPI + SQLAlchemy 2.x + Alembic
-  backend; PostgreSQL in production (SQLite fallback for local dev/tests).
+## 13. Design system
+
+A token-driven design system implemented in CSS custom properties:
+
+- **Themes** — light and dark, each with distinct neutral surfaces, borders,
+  and text contrast (the dark theme is a deliberate design, not an inversion).
+- **8 accent colors** — purple `#7c2bb4`, blue `#2563eb`, indigo `#4f46e5`,
+  teal `#0d9488`, green `#16a34a`, orange `#ea580c`, rose `#e11d48`, cyan
+  `#0891b2` — each rendered in light and dark (16 combinations). Derived tones
+  (hover, text, soft background) are computed with `color-mix`.
+- **Corner radius** and **text size** are user-adjustable and scale globally
+  via CSS variables.
+- System font stack; semantic type scale; 4-px spacing scale; semantic
+  status colors (success/warning/error/info); `prefers-reduced-motion`
+  respected.
+- Responsive: persistent sidebar on desktop, a drawer + compact top bar on
+  mobile, with safe-area handling.
+
+---
+
+## 14. Platform & operations
+
+- **Stack** — React 18 (Vite) frontend; **FastAPI + SQLAlchemy 2.x + Alembic**
+  backend; **PostgreSQL** in production (SQLite fallback for local dev/tests);
+  psycopg v3 driver.
+- **Frontend libs** — React Router, TanStack Query, Zustand, Lucide icons,
+  KaTeX, react-markdown, PDF.js, d3-force, Three.js.
+- **Backend libs** — Argon2id (`argon2-cffi`), `cryptography`, `python-multipart`,
+  `aiofiles`, `pywebpush`, `python-dateutil` (RRULE), `rdkit`.
 - **Docker Compose** — PostgreSQL + backend + nginx serving the whole app on a
-  single port (5480); health checks and persistent volumes; optional **LiveKit**
-  service for group audio.
+  **single port (5480)**; health checks; persistent volumes; optional **LiveKit**
+  service (behind a Compose profile).
 - **Backups** — documented `pg_dump` + file-storage procedure.
-- **NixOS** deployment instructions.
-- **Concurrency** — validated for ~100 concurrent users (PostgreSQL connection
-  pooling; conflict-free whiteboard ops; a 100-user stress test in the suite).
+- **NixOS** — deployment instructions provided.
+- **Concurrency** — validated for ~100 concurrent users: PostgreSQL connection
+  pooling, server-sequenced whiteboard operations, and a 100-user stress test
+  in the suite.
+- **Migrations** — portable Alembic migrations (work on both SQLite and
+  PostgreSQL).
 
 ---
 
-## 14. Security (summary)
+## 15. Security
 
-- Server-enforced authorization on every protected route (deny-by-default);
-  `404` for resources the caller must not know exist.
-- Traversal-safe file storage, size/quota limits, and no execution of uploads.
-- Markdown sanitization; parameterized queries; narrow CORS; safe formula
-  evaluation.
-- WebSocket room authorization re-checked on every relay.
+- **Authentication** — Argon2id hashing; rotating, hashed refresh tokens;
+  signed short-lived access tokens; HttpOnly/SameSite cookies; WebSocket
+  tickets; HMAC-verified SchoolApp assertions with issuer/audience/expiry
+  checks.
+- **Authorization** — deny-by-default on every protected route; graded
+  permissions for files/pages; resources the caller must not know exist return
+  `404` (no existence leak). Re-checked live, so revoked access takes effect
+  immediately (including WebSocket relays).
+- **Files** — streamed uploads with size/quota limits; traversal-safe, sharded
+  storage paths; uploaded content is never executed or served as active
+  content.
+- **Rich content** — Markdown sanitization (`rehype-sanitize`); formula
+  evaluation sandboxed via `ast`; no arbitrary user code execution.
+- **WebSockets** — authenticated connections, room-level authorization
+  re-checked on every event, payload size limits.
+- **API** — parameterized queries (no SQL injection); narrow CORS allow-list;
+  request size limits; no raw exceptions leaked to clients.
+- **No logging** of message bodies, file contents, passwords, or tokens.
 
 ---
 
-## Not yet implemented
+## 16. API surface
 
-Stated plainly so reviewers aren't misled:
+The backend exposes a modular REST API under `/api` (interactive OpenAPI docs
+at `/api/docs`):
+
+- `/auth` — register, login, refresh, logout, me, SchoolApp assert, WS ticket.
+- `/users` — profile read/update, user search, storage usage.
+- `/pages` — page CRUD, block upsert, links, backlinks.
+- `/knowledge` — graph, search.
+- `/vault/files` — upload/download/preview, share, transfer, unlink,
+  make-public/private, comments. Plus unauthenticated `/public/files/{token}`.
+- `/tasks`, `/projects`, `/calendar` (events + recurrence + ICS export).
+- `/conversations`, `/messages`, `/groups` (invite links, join, approval).
+- `/sessions` (study rooms + invite links).
+- `/whiteboards` (operation log).
+- `/annotations` (PDF annotation layer).
+- `/databases` (properties, records, formula).
+- `/chemistry/molecule` (SMILES → 3D structure).
+- `/notifications` (in-app + push subscription + VAPID key).
+- `/settings`, `/calls` (config + LiveKit token).
+- `/api/ws` — WebSocket realtime (conversation/group/session/whiteboard/file
+  rooms).
+
+All collection routes are paginated (`limit`/`offset`); timestamps are UTC
+ISO-8601.
+
+---
+
+## 17. Testing
+
+- **Backend** — 27 pytest tests covering authentication, session rotation,
+  authorization boundaries (IDOR, cross-group leakage, removed-member access),
+  storage quota/transfer/unlink, public-file share/revoke, group invite-link
+  approval, people search, SchoolApp assertion verification, and a **100-user
+  concurrency stress test** (messages + whiteboard).
+- **Frontend** — production build (`npm run build`) verified; end-to-end flows
+  exercised in a real headless browser (SchoolApp sign-in, note autosave,
+  calendar, whiteboard draw/undo/redo, PDF annotate, chemistry 3D viewer).
+
+---
+
+## 18. Not yet implemented
+
+Stated precisely so reviewers are not misled:
 
 - **Group audio media** — the LiveKit SFU is wired (token endpoint + Docker
-  service + config) and 1:1 WebRTC calls work, but group-call *media* needs the
-  LiveKit server deployed and a `livekit-client` join flow in the frontend.
-- **Browser push delivery** — the subscription flow and service worker are in
-  place; actually *sending* pushes requires VAPID keys to be configured.
-- **CalDAV (two-way sync)** — only ICS *export* is implemented; there is no
-  CalDAV server or import.
-- **Database board/gallery views** — only the table view is implemented.
-- **Chemical-structure *sketching*** — the chemistry tool draws atoms and
-  bonds and verifies SMILES via RDKit, but there is no 2D sketcher with
-  drag-to-place bonds in the 3D viewer (the whiteboard has a basic atom/bond
-  tool).
+  service + config) and 1:1 WebRTC calls work, but group-call *media* requires
+  the LiveKit server to be deployed and a `livekit-client` join flow in the
+  frontend.
+- **Browser push *delivery*** — the subscription flow and service worker are in
+  place; actually sending pushes requires VAPID keys to be configured.
+- **CalDAV (two-way sync)** — only ICS **export** exists; no CalDAV server or
+  import.
+- **Database board/gallery/calendar views** — only the table view is
+  implemented.
+- **2D molecular sketcher** — chemistry verifies SMILES and shows 3D; there is
+  no drag-to-place 2D sketcher (the whiteboard has a basic atom/bond tool).
+- **Message reactions UI** and **link/attachment previews** — persisted in the
+  API/model but not yet surfaced in the message UI.
+- **Browser push / profile photo upload** — not present (avatars are
+  initial-based placeholders).
+- **TURN relay** — STUN only by default; TURN not provisioned.
