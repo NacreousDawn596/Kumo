@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Atom, RotateCcw } from "lucide-react";
+import { Atom, PenLine, RotateCcw } from "lucide-react";
 import { apiPost } from "../api/client.js";
 import { Button, Input } from "../components/ui.jsx";
 import MoleculeViewer from "../components/MoleculeViewer.jsx";
+import SketchPad from "../components/SketchPad.jsx";
 import "../styles/pages.css";
 import "./chemistry.css";
 
@@ -17,14 +18,17 @@ const EXAMPLES = [
 ];
 
 export default function ChemistryPage() {
+  const [mode, setMode] = useState("smiles");
   const [smiles, setSmiles] = useState("CCO");
   const [spin, setSpin] = useState(false);
+  const [result, setResult] = useState(null);
 
   const analyze = useMutation({
     mutationFn: (s) => apiPost("/api/chemistry/molecule", { smiles: s }),
+    onSuccess: (d) => setResult(d),
   });
 
-  const data = analyze.data;
+  const data = result;
 
   return (
     <div className="page">
@@ -32,30 +36,46 @@ export default function ChemistryPage() {
         <div>
           <h1 className="page-title">Chemistry</h1>
           <p className="page-subtitle">
-            Enter a SMILES string to verify it and view its 3D structure.
+            Verify a molecule by SMILES or draw it, then view its 3D structure.
           </p>
+        </div>
+        <div className="page-actions">
+          <div className="view-switcher">
+            <button className={`view-chip ${mode === "smiles" ? "view-chip-active" : ""}`} onClick={() => setMode("smiles")}>
+              <Atom size={14} /> SMILES
+            </button>
+            <button className={`view-chip ${mode === "sketch" ? "view-chip-active" : ""}`} onClick={() => setMode("sketch")}>
+              <PenLine size={14} /> Sketcher
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="chem-input-row">
-        <Input
-          placeholder="SMILES, e.g. CCO"
-          value={smiles}
-          onChange={(e) => setSmiles(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && analyze.mutate(smiles)}
-        />
-        <Button variant="primary" icon={Atom} loading={analyze.isPending} onClick={() => analyze.mutate(smiles)}>
-          Build
-        </Button>
-      </div>
+      {mode === "smiles" ? (
+        <>
+          <div className="chem-input-row">
+            <Input
+              placeholder="SMILES, e.g. CCO"
+              value={smiles}
+              onChange={(e) => setSmiles(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && analyze.mutate(smiles)}
+            />
+            <Button variant="primary" icon={Atom} loading={analyze.isPending} onClick={() => analyze.mutate(smiles)}>
+              Build
+            </Button>
+          </div>
 
-      <div className="chem-examples">
-        {EXAMPLES.map((ex) => (
-          <button key={ex.smiles} className="template-chip" onClick={() => { setSmiles(ex.smiles); analyze.mutate(ex.smiles); }}>
-            {ex.label}
-          </button>
-        ))}
-      </div>
+          <div className="chem-examples">
+            {EXAMPLES.map((ex) => (
+              <button key={ex.smiles} className="template-chip" onClick={() => { setSmiles(ex.smiles); analyze.mutate(ex.smiles); }}>
+                {ex.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <SketchPad onStructure={setResult} />
+      )}
 
       {analyze.error && <p className="auth-error">{(analyze.error.data?.detail) || "Failed to analyze."}</p>}
       {data && !data.valid && <p className="auth-error">{data.error}</p>}

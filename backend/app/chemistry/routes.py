@@ -33,17 +33,17 @@ class MoleculeIn(BaseModel):
     smiles: str
 
 
+class SketchIn(BaseModel):
+    molfile: str
+
+
 def _cpk(symbol: str) -> str:
     return CPK.get(symbol, "#ff1493")
 
 
-def _structure(smiles: str) -> dict:
+def _structure_from_mol(mol) -> dict:
     from rdkit import Chem
     from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
-
-    mol = Chem.MolFromSmiles(smiles.strip())
-    if mol is None:
-        return {"valid": False, "error": "Could not parse this SMILES string."}
 
     # Sanitization already validated valences/connectivity. Add explicit H for a
     # physically sensible 3D embedding; heavy atoms keep their original indices.
@@ -98,6 +98,15 @@ def _structure(smiles: str) -> dict:
     }
 
 
+def _structure(smiles: str) -> dict:
+    from rdkit import Chem
+
+    mol = Chem.MolFromSmiles(smiles.strip())
+    if mol is None:
+        return {"valid": False, "error": "Could not parse this SMILES string."}
+    return _structure_from_mol(mol)
+
+
 @router.post("/molecule")
 def analyze_molecule(body: MoleculeIn):
     if not body.smiles or not body.smiles.strip():
@@ -105,3 +114,19 @@ def analyze_molecule(body: MoleculeIn):
     if len(body.smiles) > 500:
         raise HTTPException(status_code=400, detail="SMILES too long")
     return _structure(body.smiles)
+
+
+@router.post("/sketch")
+def analyze_sketch(body: SketchIn):
+    from rdkit import Chem
+
+    if not body.molfile or len(body.molfile) > 20000:
+        raise HTTPException(status_code=400, detail="Molfile is required")
+    mol = Chem.MolFromMolBlock(body.molfile, sanitize=False)
+    if mol is None:
+        return {"valid": False, "error": "Could not parse the drawn structure."}
+    try:
+        Chem.SanitizeMol(mol)
+    except Exception:  # noqa: BLE001 — report invalid valences
+        return {"valid": False, "error": "The drawn structure has invalid valences."}
+    return _structure_from_mol(mol)

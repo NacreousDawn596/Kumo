@@ -76,3 +76,67 @@
   border-radius: 50%;
   border: 1px solid var(--border-strong);
 }
+
+.sketch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.sketch-palette {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.sketch-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-right: var(--sp-1);
+}
+.sketch-el {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.sketch-el-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.sketch-actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--sp-2);
+}
+.sketch-canvas {
+  width: 100%;
+  height: 380px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: crosshair;
+  touch-action: none;
+  outline: none;
+}
+.sketch-atom {
+  fill: var(--surface);
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+.sketch-atom-selected {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.sketch-atom-label {
+  fill: var(--text-primary);
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  pointer-events: none;
+  user-select: none;
+}
