@@ -28,7 +28,7 @@ def _b64url(data: bytes) -> str:
 
 
 def _livekit_configured() -> bool:
-    return bool(settings.livekit_api_key and settings.livekit_api_secret)
+    return bool(settings.livekit_url and settings.livekit_api_key and settings.livekit_api_secret)
 
 
 @router.get("/config")

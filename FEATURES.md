@@ -244,8 +244,8 @@ interface is designed so an S3-compatible backend can replace local files later.
 - **In-room group calls** — the study-room page has a "Join group call" button
   that uses `livekit-client` to connect to the SFU, publish the microphone, and
   subscribe to other participants (with live participant count and mute/leave
-  controls). Requires the LiveKit server to be deployed with API keys (see
-  [Not yet implemented](#18-not-yet-implemented)).
+  controls). The LiveKit server runs as a default Docker service, so this works
+  out of the box with `docker compose up`.
 
 ---
 
@@ -288,17 +288,16 @@ papers, and lab data.
 
 - **Property types (11):** `title`, `text`, `number`, `checkbox`, `select`,
   `multi_select`, `date`, `person`, `url`, `relation`, `formula`.
-- **Three views** — **table** (inline cell editing), **board** (Kanban columns
-  grouped by a `select` property, with per-column "new" actions), and
-  **gallery** (record cards showing the title plus a few properties).
+- **Four views** — **table** (inline cell editing), **board** (Kanban columns
+  grouped by a `select` property, with per-column "new" actions), **gallery**
+  (record cards showing the title plus a few properties), and **calendar**
+  (records with a `date` property appear on a month grid).
 - Add/delete rows and properties.
 - **Formula properties** — a safe, constrained expression evaluator that
   references other properties by name. Supports arithmetic, comparison,
   `if`/`else` expressions, and functions (`abs`, `round`, `min`, `max`, `sum`,
   `len`, `sqrt`, `floor`, `ceil`). Parsing uses a whitelisted `ast` — arbitrary
   code, imports, and attribute access are **rejected**.
-- A dedicated calendar view is not implemented yet (see
-  [Not yet implemented](#18-not-yet-implemented)).
 
 ---
 
@@ -388,8 +387,11 @@ A token-driven design system implemented in CSS custom properties:
 - **Backend libs** — Argon2id (`argon2-cffi`), `cryptography`, `python-multipart`,
   `aiofiles`, `pywebpush`, `python-dateutil` (RRULE), `rdkit`.
 - **Docker Compose** — PostgreSQL + backend + nginx serving the whole app on a
-  **single port (5480)**; health checks; persistent volumes; optional **LiveKit**
-  and **coturn** services (behind a Compose profile).
+  **single port (5480)**, plus **LiveKit** (group-audio SFU) and **coturn**
+  (TURN relay) as default services; health checks and persistent volumes.
+  Group audio, TURN, and Web Push are wired end-to-end so `docker compose up`
+  enables them out of the box (with dev credentials; see `.env.example` for
+  production values).
 - **Backups** — documented `pg_dump` + file-storage procedure.
 - **NixOS** — deployment instructions provided.
 - **Concurrency** — validated for ~100 concurrent users: PostgreSQL connection
@@ -474,17 +476,6 @@ Stated precisely so reviewers are not misled:
 - **CalDAV (two-way sync)** — ICS **import and export** both exist, but there
   is no CalDAV protocol server for live two-way sync with external calendar
   apps.
-- **Database calendar view** — table, board, and gallery views are implemented;
-  a calendar view is not.
-- **Group audio deployment** — the LiveKit token endpoint, `livekit-client`
-  join flow, and Docker service are all in place; actually making group-call
-  media work requires deploying the LiveKit server and setting the
-  `LIVEKIT_*` keys.
-- **TURN relay deployment** — STUN works out of the box and TURN is fully
-  wired (config + `coturn` service + frontend ICE servers); enabling it just
-  requires the coturn server and `TURN_URIS` to be configured.
-- **Browser push *deployment*** — the subscription flow, service worker, and
-  send path are wired; enabling delivery just requires setting the VAPID keys.
 - **Message attachments** (files/images) — not present; only link previews are
   supported.
 - **No call recording** in 1:1 or group calls.

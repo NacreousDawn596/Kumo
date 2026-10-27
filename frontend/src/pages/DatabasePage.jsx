@@ -1,7 +1,18 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, LayoutGrid, List, Plus, Table2 } from "lucide-react";
+import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
+import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Plus, Table2 } from "lucide-react";
 import { api, apiDelete, apiPatch, apiPost } from "../api/client.js";
 import { Button, Dialog, Input } from "../components/ui.jsx";
 import "../styles/pages.css";
@@ -20,6 +31,7 @@ const VIEWS = [
   { id: "table", label: "Table", icon: Table2 },
   { id: "board", label: "Board", icon: LayoutGrid },
   { id: "gallery", label: "Gallery", icon: List },
+  { id: "calendar", label: "Calendar", icon: CalendarDays },
 ];
 
 export default function DatabasePage() {
@@ -63,6 +75,7 @@ export default function DatabasePage() {
   const records = db?.records || [];
   const titleProp = props.find((p) => p.type === "title") || props[0];
   const groupProp = props.find((p) => p.type === "select");
+  const dateProp = props.find((p) => p.type === "date");
 
   const titleOf = (r) => (titleProp ? String(r.values?.[titleProp.id] ?? "") : "");
 
@@ -99,6 +112,10 @@ export default function DatabasePage() {
 
       {view === "gallery" && (
         <GalleryView props={props} records={records} titleOf={titleOf} updateCell={updateCell} deleteRecord={deleteRecord} />
+      )}
+
+      {view === "calendar" && (
+        <CalendarView records={records} dateProp={dateProp} titleOf={titleOf} />
       )}
 
       <Dialog
@@ -211,6 +228,61 @@ function GalleryView({ props, records, titleOf, updateCell, deleteRecord }) {
           <button className="btn btn-ghost btn-sm" onClick={() => deleteRecord.mutate(r.id)}>Delete</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function CalendarView({ records, dateProp, titleOf }) {
+  const [month, setMonth] = useState(() => new Date());
+
+  if (!dateProp) {
+    return (
+      <p className="home-muted">
+        Add a <strong>Date</strong> property to use the calendar view — records with a date appear on the calendar.
+      </p>
+    );
+  }
+
+  const byDay = {};
+  for (const r of records) {
+    const raw = r.values?.[dateProp.id];
+    if (!raw) continue;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) continue;
+    const key = format(d, "yyyy-MM-dd");
+    (byDay[key] ||= []).push(r);
+  }
+
+  const days = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }),
+  });
+
+  return (
+    <div className="db-cal">
+      <div className="db-cal-head">
+        <button className="btn btn-ghost btn-sm" onClick={() => setMonth((m) => addMonths(m, -1))}><ChevronLeft size={14} /></button>
+        <span className="db-cal-title">{format(month, "MMMM yyyy")}</span>
+        <button className="btn btn-ghost btn-sm" onClick={() => setMonth((m) => addMonths(m, 1))}><ChevronRight size={14} /></button>
+      </div>
+      <div className="db-cal-grid db-cal-weekdays">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <span key={d}>{d}</span>)}
+      </div>
+      <div className="db-cal-grid">
+        {days.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          const items = byDay[key] || [];
+          return (
+            <div key={key} className={`db-cal-cell ${!isSameMonth(day, month) ? "db-cal-out" : ""}`}>
+              <span className="db-cal-day">{format(day, "d")}</span>
+              {items.slice(0, 3).map((r) => (
+                <span key={r.id} className="db-cal-chip" title={titleOf(r)}>{titleOf(r) || "Untitled"}</span>
+              ))}
+              {items.length > 3 && <span className="db-cal-more">+{items.length - 3}</span>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

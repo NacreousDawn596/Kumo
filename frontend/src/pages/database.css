@@ -152,3 +152,62 @@
   flex-direction: column;
   gap: 2px;
 }
+
+.db-cal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.db-cal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.db-cal-title {
+  font-weight: var(--weight-semibold);
+  margin: 0 auto;
+}
+.db-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.db-cal-weekdays span {
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 0 4px;
+}
+.db-cal-cell {
+  min-height: 72px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+.db-cal-out {
+  opacity: 0.4;
+}
+.db-cal-day {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.db-cal-chip {
+  display: block;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db-cal-more {
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}

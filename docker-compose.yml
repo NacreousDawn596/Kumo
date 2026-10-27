@@ -17,32 +17,26 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     command: --config /etc/livekit.yaml
-    environment:
-      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
     ports:
       - "7880:7880"
       - "7881:7881"
-      - "7882:7882/udp"
+      - "7882-7890:7882-7890/udp"
     volumes:
       - ./infra/livekit.yaml:/etc/livekit.yaml:ro
     restart: unless-stopped
-    profiles: ["livekit"]
 
   coturn:
     image: coturn/coturn:latest
-    command: -n --log-file=stdout --lt-cred-mech --fingerprint
-    environment:
-      TURN_PORT: 3478
-      TURN_USER: "${TURN_USERNAME:-kumo}"
-      TURN_REALM: kumo
-      TURN_SECRET: "${TURN_CREDENTIAL:-kumo-turn-secret}"
+    command: -c /etc/turnserver.conf
     ports:
       - "3478:3478"
       - "3478:3478/udp"
       - "5349:5349"
       - "5349:5349/udp"
+      - "49160-49200:49160-49200/udp"
+    volumes:
+      - ./infra/turnserver.conf:/etc/turnserver.conf:ro
     restart: unless-stopped
-    profiles: ["livekit"]
 
   backend:
     build: ./backend
@@ -64,12 +58,12 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@kumo.example.com}
-      # LiveKit SFU (group audio).
-      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      # LiveKit SFU (group audio) — served by the livekit container above.
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecret}
-      # TURN relay.
-      TURN_URIS: ${TURN_URIS:-}
+      # TURN relay — served by the coturn container above.
+      TURN_URIS: ${TURN_URIS:-turn:localhost:3478}
       TURN_USERNAME: ${TURN_USERNAME:-kumo}
       TURN_CREDENTIAL: ${TURN_CREDENTIAL:-kumo-turn-secret}
     volumes:
