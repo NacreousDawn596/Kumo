@@ -15,6 +15,8 @@ study engineering, and collaborate lives in one connected workspace.
 - **Vault** — private/group file storage, secure sharing, comments.
 - **Tasks, projects, calendar** — deadlines and events linked to notes, files,
   and study rooms.
+- **CalDAV** — bidirectional sync with Apple Calendar / Thunderbird / GNOME
+  Calendar via Radicale, with the app database as the single source of truth.
 - **Messaging & groups** — realtime chat, reactions, presence, roles.
 - **Collaboration** — live whiteboards and a collaborative PDF annotation
   workspace.
@@ -26,6 +28,7 @@ study engineering, and collaborate lives in one connected workspace.
   Lucide, KaTeX, react-markdown, PDF.js, d3-force.
 - **Backend**: FastAPI, SQLAlchemy 2.x, PostgreSQL, Alembic, Argon2id.
 - **Realtime**: WebSocket (presence/events); WebRTC for peer audio.
+- **CalDAV**: Radicale with a custom storage backend bound to the app database.
 
 ## Quick start (development)
 
@@ -60,6 +63,17 @@ docker compose up -d --build
 
 The whole app is served on **http://localhost:5480** (frontend + API + WebSocket
 behind one nginx reverse proxy).
+
+### CalDAV clients
+
+Connect an external calendar client with your Kumo email/password:
+
+- Server URL: `https://your-host/caldav/` (or `http://localhost:5480/caldav/`)
+- Username: your Kumo email or username
+- Password: your Kumo password
+
+The client auto-discovers your calendar via `/.well-known/caldav`. Events you
+create or edit in the app appear in the client, and vice versa.
 
 ## Tests
 

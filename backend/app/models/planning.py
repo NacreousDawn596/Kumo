@@ -86,6 +86,10 @@ class CalendarEvent(IdMixin, TimestampMixin, Base):
     )
     recurrence: Mapped[str | None] = mapped_column(Text, nullable=True)
     cancelled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Stable CalDAV UID. When a CalDAV client creates the event, this preserves
+    # the client's UID (so it round-trips). Null for app-created events, whose
+    # CalDAV UID is derived as ``{id}@kumo``.
+    uid: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
 
     participants: Mapped[list["EventParticipant"]] = relationship(
         back_populates="event", cascade="all, delete-orphan"

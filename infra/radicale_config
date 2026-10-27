@@ -1,0 +1,23 @@
+# Radicale configuration for Kumo.
+# Served behind nginx at /caldav/ (see frontend/nginx.conf).
+
+[server]
+hosts = 0.0.0.0:5232
+script_name = /caldav
+max_resource_size = 10000000
+
+[auth]
+type = app.caldav.auth
+
+[rights]
+type = app.caldav.rights
+
+[storage]
+type = app.caldav.storage
+filesystem_folder = /app/data/radicale
+
+[web]
+type = none
+
+[logging]
+level = info

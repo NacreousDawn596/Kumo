@@ -203,6 +203,33 @@ interface is designed so an S3-compatible backend can replace local files later.
 - **ICS import** — upload a `.ics` file; `VEVENT` blocks (SUMMARY, DTSTART,
   DTEND, DESCRIPTION, LOCATION, RRULE) are parsed and imported as events.
 
+### CalDAV (Radicale)
+
+- **Real, bidirectional CalDAV synchronization** with external clients
+  (Apple Calendar, Thunderbird, GNOME Calendar, …) via **Radicale**, exposed
+  at `/caldav/` and discovered through `/.well-known/caldav`.
+- The application database remains the **single source of truth**: a custom
+  Radicale **storage backend** materializes collections and events directly
+  from `calendar_events` — there is no separate calendar store and no periodic
+  ICS import.
+- **Authentication** — HTTP Basic auth against the account's local password
+  (Argon2id); a custom **rights backend** enforces per-user isolation (each
+  user owns only `/{username}/calendar/`).
+- **Create, update, delete, and read** from CalDAV clients are reflected in the
+  app (and vice versa) on the next read, including **recurring (RRULE)**, and
+  **all-day** events.
+- **UIDs** — client-supplied UIDs round-trip; app-created events use the derived
+  `{id}@kumo` UID.
+- **Conflict handling** — per-item ETags support optimistic concurrency
+  (`If-Match` / `If-None-Match` precondition checks).
+- **Change detection** — WebDAV `sync-collection` REPORT returns an incremental
+  sync token and the changed item hrefs (deletions are reported through a
+  missing item).
+- **Deletions** use the same soft-delete (`cancelled`) semantics as the app.
+- Ships as a default **Docker Compose service** (same image as the backend,
+  separate process) with a persistent `/app/data` volume and config at
+  `infra/radicale_config`.
+
 ---
 
 ## 6. Communication
@@ -387,11 +414,11 @@ A token-driven design system implemented in CSS custom properties:
 - **Backend libs** — Argon2id (`argon2-cffi`), `cryptography`, `python-multipart`,
   `aiofiles`, `pywebpush`, `python-dateutil` (RRULE), `rdkit`.
 - **Docker Compose** — PostgreSQL + backend + nginx serving the whole app on a
-  **single port (5480)**, plus **LiveKit** (group-audio SFU) and **coturn**
-  (TURN relay) as default services; health checks and persistent volumes.
-  Group audio, TURN, and Web Push are wired end-to-end so `docker compose up`
-  enables them out of the box (with dev credentials; see `.env.example` for
-  production values).
+  **single port (5480)**, plus **LiveKit** (group-audio SFU), **coturn**
+  (TURN relay), and **Radicale** (CalDAV) as default services; health checks
+  and persistent volumes. Group audio, TURN, Web Push, and CalDAV are wired
+  end-to-end so `docker compose up` enables them out of the box (with dev
+  credentials; see `.env.example` for production values).
 - **Backups** — documented `pg_dump` + file-storage procedure.
 - **NixOS** — deployment instructions provided.
 - **Concurrency** — validated for ~100 concurrent users: PostgreSQL connection
@@ -449,6 +476,8 @@ at `/api/docs`):
 - `/settings`, `/calls` (config + LiveKit token).
 - `/api/ws` — WebSocket realtime (conversation/group/session/whiteboard/file
   rooms).
+- **CalDAV** — `/caldav/{username}/calendar/` (Radicale, HTTP Basic auth) plus
+  `/.well-known/caldav` for client discovery.
 
 All collection routes are paginated (`limit`/`offset`); timestamps are UTC
 ISO-8601.
@@ -457,12 +486,14 @@ ISO-8601.
 
 ## 17. Testing
 
-- **Backend** — 30 pytest tests covering authentication, session rotation,
+- **Backend** — 39 pytest tests covering authentication, session rotation,
   authorization boundaries (IDOR, cross-group leakage, removed-member access),
   storage quota/transfer/unlink, public-file share/revoke, group invite-link
   approval, people search, SchoolApp assertion verification, chemistry
-  sketcher, ICS import, avatar upload, and a **100-user concurrency stress
-  test** (messages + whiteboard).
+  sketcher, ICS import, avatar upload, **CalDAV** (create/read/update/delete,
+  app↔CalDAV round-trip, If-Match conflict, deletion, authentication, and
+  per-user isolation via the real Radicale WSGI app), and a **100-user
+  concurrency stress test** (messages + whiteboard).
 - **Frontend** — production build (`npm run build`) verified; end-to-end flows
   exercised in a real headless browser (SchoolApp sign-in, note autosave,
   calendar, whiteboard draw/undo/redo, PDF annotate, chemistry 3D viewer).
@@ -473,9 +504,13 @@ ISO-8601.
 
 Stated precisely so reviewers are not misled:
 
-- **CalDAV (two-way sync)** — ICS **import and export** both exist, but there
-  is no CalDAV protocol server for live two-way sync with external calendar
-  apps.
+- **CalDAV time-zone expansion** — events are stored/synced in UTC; `TZID`
+  round-trips as a display hint but a full `VTIMEZONE` definition is not
+  emitted (clients convert to their local time zone).
+- **RDATE/EXDATE recurrence exceptions** — RRULE recurs, but per-instance
+  exceptions (moved/cancelled occurrences) are not preserved.
 - **Message attachments** (files/images) — not present; only link previews are
   supported.
 - **No call recording** in 1:1 or group calls.
+- **Calendar color / display-name** `PROPPATCH` — accepted but not persisted
+  (the calendar name is fixed to "Kumo Calendar").

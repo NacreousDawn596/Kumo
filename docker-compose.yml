@@ -39,6 +39,7 @@ services:
     restart: unless-stopped
 
   backend:
+    image: kumo-backend
     build: ./backend
     environment:
       ENVIRONMENT: production
@@ -73,6 +74,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  radicale:
+    image: kumo-backend
+    build: ./backend
+    command: sh -c "mkdir -p /app/data/radicale && uv run radicale --config /etc/radicale/config"
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://kumo:${POSTGRES_PASSWORD:-kumo}@postgres:5432/kumo
+    volumes:
+      - ./infra/radicale_config:/etc/radicale/config:ro
+      - kumo-data:/app/data
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
@@ -82,6 +98,7 @@ services:
       - "5480:80"
     depends_on:
       - backend
+      - radicale
     restart: unless-stopped
 
 volumes:
