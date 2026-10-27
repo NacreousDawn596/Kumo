@@ -13,6 +13,7 @@ import ProjectDetailPage from "./pages/ProjectDetailPage.jsx";
 import NotesPage from "./pages/NotesPage.jsx";
 import DatabasesPage from "./pages/DatabasesPage.jsx";
 import DatabasePage from "./pages/DatabasePage.jsx";
+import ChemistryPage from "./pages/ChemistryPage.jsx";
 import PageEditorPage from "./pages/PageEditorPage.jsx";
 import KnowledgePage from "./pages/KnowledgePage.jsx";
 import VaultPage from "./pages/VaultPage.jsx";
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="databases/:dbId" element={<DatabasePage />} />
         <Route path="pages/:pageId" element={<PageEditorPage />} />
         <Route path="knowledge" element={<KnowledgePage />} />
+        <Route path="chemistry" element={<ChemistryPage />} />
         <Route path="vault" element={<VaultPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="sessions/:sessionId" element={<StudyRoomPage />} />

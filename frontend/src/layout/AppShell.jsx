@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
+  Atom,
   Calendar,
   FileText,
   Folder,
@@ -46,6 +47,7 @@ const NAV = [
 const NAV_SECONDARY = [
   { to: "/sessions", label: "Study Rooms", icon: Video },
   { to: "/groups", label: "Groups", icon: Users },
+  { to: "/chemistry", label: "Chemistry", icon: Atom },
 ];
 
 export default function AppShell() {

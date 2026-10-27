@@ -1,0 +1,78 @@
+.chem-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 560px;
+}
+.chem-input-row .input {
+  flex: 1;
+}
+.chem-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-5);
+}
+.chem-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--sp-5);
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .chem-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.chem-viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+.chem-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.chem-info {
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.chem-props {
+  display: flex;
+  flex-direction: column;
+  margin: var(--sp-2) 0 var(--sp-4);
+}
+.chem-props > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.chem-props dt {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.chem-props dd {
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+}
+.chem-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.chem-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-sm);
+}
+.chem-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}

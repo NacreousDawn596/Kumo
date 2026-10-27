@@ -18,6 +18,7 @@ dependencies = [
     "psycopg[binary]>=3.1",
     "python-dateutil>=2.9",
     "pywebpush>=2.0",
+    "rdkit>=2026.9.1",
 ]
 
 [project.optional-dependencies]
