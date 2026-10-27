@@ -68,9 +68,10 @@ nothing is overstated.
 **Profiles**
 
 - Editable: display name, bio, study interests, time zone, theme, language.
+- **Profile photo upload** — PNG/JPEG/WebP/GIF (2 MB max), stored in the
+  storage layer and served from `/api/users/{id}/avatar`; the previous photo is
+  cleaned up automatically.
 - Stable internal IDs and unique normalized usernames.
-- Profile photos are not uploaded in this version (placeholder avatars from the
-  display name).
 
 ---
 
@@ -199,6 +200,8 @@ interface is designed so an S3-compatible backend can replace local files later.
 - **Recurring events** — RFC 5545 RRULE strings (e.g. `FREQ=WEEKLY;BYDAY=MO`)
   are validated and expanded across the calendar.
 - **ICS export** — download the user's events as a standards-compliant `.ics`.
+- **ICS import** — upload a `.ics` file; `VEVENT` blocks (SUMMARY, DTSTART,
+  DTEND, DESCRIPTION, LOCATION, RRULE) are parsed and imported as events.
 
 ---
 
@@ -208,19 +211,21 @@ interface is designed so an S3-compatible backend can replace local files later.
 
 - **Direct messages** and **group conversations**.
 - Message history with pagination, **editing**, **deletion**, **replies**, and
-  **reactions** (reactions are persisted in the API; there is no reaction
-  picker UI yet).
+  **reactions** (a hover "+" opens an emoji picker; reactions are grouped by
+  emoji with counts).
+- **Link previews** — attach a page/file/task to a message via a searchable
+  picker; the message renders a preview card linking to the resource.
 - **Unread counters** and **read receipts**.
 - **Realtime** delivery over WebSocket — sent messages appear to other
   participants immediately (the send endpoint also broadcasts a room event).
-- Attachments/link previews are represented in the data model (link resource
-  references) but not fully surfaced in the UI.
 
 ### 1:1 audio calls
 
 - Peer-to-peer **WebRTC** with WebSocket signaling.
 - Call, accept, **mute/unmute**, and hang up — directly from a conversation.
-- Uses a STUN server; TURN is configurable but not provisioned by default.
+- **STUN + optional TURN** — ICE servers are fetched from `/api/calls/config`,
+  which includes TURN credentials when configured (a `coturn` service is
+  provided in Docker Compose).
 - No call recording.
 
 ### Groups
@@ -235,9 +240,12 @@ interface is designed so an S3-compatible backend can replace local files later.
 ### Group audio (SFU)
 
 - A **LiveKit** adapter is wired: a token endpoint mints signed LiveKit access
-  tokens, and a Docker service + config are provided. Actual group-call media
-  requires the LiveKit server to be deployed and a `livekit-client` join flow
-  (see [Not yet implemented](#18-not-yet-implemented)).
+  tokens, and a Docker service + config are provided.
+- **In-room group calls** — the study-room page has a "Join group call" button
+  that uses `livekit-client` to connect to the SFU, publish the microphone, and
+  subscribe to other participants (with live participant count and mute/leave
+  controls). Requires the LiveKit server to be deployed with API keys (see
+  [Not yet implemented](#18-not-yet-implemented)).
 
 ---
 
@@ -280,13 +288,17 @@ papers, and lab data.
 
 - **Property types (11):** `title`, `text`, `number`, `checkbox`, `select`,
   `multi_select`, `date`, `person`, `url`, `relation`, `formula`.
-- **Table view** with inline cell editing, and add/delete rows and properties.
+- **Three views** — **table** (inline cell editing), **board** (Kanban columns
+  grouped by a `select` property, with per-column "new" actions), and
+  **gallery** (record cards showing the title plus a few properties).
+- Add/delete rows and properties.
 - **Formula properties** — a safe, constrained expression evaluator that
   references other properties by name. Supports arithmetic, comparison,
   `if`/`else` expressions, and functions (`abs`, `round`, `min`, `max`, `sum`,
   `len`, `sqrt`, `floor`, `ceil`). Parsing uses a whitelisted `ast` — arbitrary
   code, imports, and attribute access are **rejected**.
-- Board/gallery/calendar views are not implemented yet (table only).
+- A dedicated calendar view is not implemented yet (see
+  [Not yet implemented](#18-not-yet-implemented)).
 
 ---
 
@@ -296,9 +308,12 @@ A molecular tool powered by **RDKit** (server-side cheminformatics).
 
 - **SMILES input** with an example gallery (ethanol, benzene, caffeine, acetic
   acid, glucose, ammonium).
-- **Chemical verification** — invalid SMILES are rejected; the molecular
-  **formula**, **molecular weight**, **formal charge**, and heavy-atom/bond
-  counts are computed and shown.
+- **2D molecular sketcher** — drag-to-place atoms (C/N/O/S/P/F/Cl/H) and draw
+  bonds by dragging atom-to-atom (click again to cycle single→double→triple).
+  The drawing is converted to a V2000 molfile and verified by RDKit.
+- **Chemical verification** — invalid SMILES or drawn structures are rejected;
+  the molecular **formula**, **molecular weight**, **formal charge**, and
+  heavy-atom/bond counts are computed and shown.
 - **3D structure viewer** (Three.js):
   - Atoms rendered as spheres with **CPK colors** (C grey, O red, N blue, H
     white, S yellow, P orange, halogens green/brown/purple, metals per Jmol).
@@ -324,8 +339,8 @@ A molecular tool powered by **RDKit** (server-side cheminformatics).
 
 - **In-app notification center** — list, unread badge, mark-read, mark-all-read.
 - **Browser push notifications** — a service worker + VAPID subscription flow
-  with a Settings toggle. Delivery requires the server's VAPID keys to be
-  configured (see [Not yet implemented](#18-not-yet-implemented)).
+  with a Settings toggle, and delivery wired into message sends (best-effort
+  Web Push to the other participants). Requires VAPID keys to be configured.
 
 ---
 
@@ -369,12 +384,12 @@ A token-driven design system implemented in CSS custom properties:
   backend; **PostgreSQL** in production (SQLite fallback for local dev/tests);
   psycopg v3 driver.
 - **Frontend libs** — React Router, TanStack Query, Zustand, Lucide icons,
-  KaTeX, react-markdown, PDF.js, d3-force, Three.js.
+  KaTeX, react-markdown, PDF.js, d3-force, Three.js, `livekit-client`.
 - **Backend libs** — Argon2id (`argon2-cffi`), `cryptography`, `python-multipart`,
   `aiofiles`, `pywebpush`, `python-dateutil` (RRULE), `rdkit`.
 - **Docker Compose** — PostgreSQL + backend + nginx serving the whole app on a
   **single port (5480)**; health checks; persistent volumes; optional **LiveKit**
-  service (behind a Compose profile).
+  and **coturn** services (behind a Compose profile).
 - **Backups** — documented `pg_dump` + file-storage procedure.
 - **NixOS** — deployment instructions provided.
 - **Concurrency** — validated for ~100 concurrent users: PostgreSQL connection
@@ -414,18 +429,20 @@ The backend exposes a modular REST API under `/api` (interactive OpenAPI docs
 at `/api/docs`):
 
 - `/auth` — register, login, refresh, logout, me, SchoolApp assert, WS ticket.
-- `/users` — profile read/update, user search, storage usage.
+- `/users` — profile read/update, user search, storage usage, avatar upload
+  and serving.
 - `/pages` — page CRUD, block upsert, links, backlinks.
 - `/knowledge` — graph, search.
 - `/vault/files` — upload/download/preview, share, transfer, unlink,
   make-public/private, comments. Plus unauthenticated `/public/files/{token}`.
-- `/tasks`, `/projects`, `/calendar` (events + recurrence + ICS export).
+- `/tasks`, `/projects`, `/calendar` (events + recurrence + ICS export/import).
 - `/conversations`, `/messages`, `/groups` (invite links, join, approval).
 - `/sessions` (study rooms + invite links).
 - `/whiteboards` (operation log).
 - `/annotations` (PDF annotation layer).
 - `/databases` (properties, records, formula).
-- `/chemistry/molecule` (SMILES → 3D structure).
+- `/chemistry/molecule` (SMILES → 3D structure) and `/chemistry/sketch`
+  (V2000 molfile from the 2D sketcher → 3D structure).
 - `/notifications` (in-app + push subscription + VAPID key).
 - `/settings`, `/calls` (config + LiveKit token).
 - `/api/ws` — WebSocket realtime (conversation/group/session/whiteboard/file
@@ -438,11 +455,12 @@ ISO-8601.
 
 ## 17. Testing
 
-- **Backend** — 27 pytest tests covering authentication, session rotation,
+- **Backend** — 30 pytest tests covering authentication, session rotation,
   authorization boundaries (IDOR, cross-group leakage, removed-member access),
   storage quota/transfer/unlink, public-file share/revoke, group invite-link
-  approval, people search, SchoolApp assertion verification, and a **100-user
-  concurrency stress test** (messages + whiteboard).
+  approval, people search, SchoolApp assertion verification, chemistry
+  sketcher, ICS import, avatar upload, and a **100-user concurrency stress
+  test** (messages + whiteboard).
 - **Frontend** — production build (`npm run build`) verified; end-to-end flows
   exercised in a real headless browser (SchoolApp sign-in, note autosave,
   calendar, whiteboard draw/undo/redo, PDF annotate, chemistry 3D viewer).
@@ -453,20 +471,20 @@ ISO-8601.
 
 Stated precisely so reviewers are not misled:
 
-- **Group audio media** — the LiveKit SFU is wired (token endpoint + Docker
-  service + config) and 1:1 WebRTC calls work, but group-call *media* requires
-  the LiveKit server to be deployed and a `livekit-client` join flow in the
-  frontend.
-- **Browser push *delivery*** — the subscription flow and service worker are in
-  place; actually sending pushes requires VAPID keys to be configured.
-- **CalDAV (two-way sync)** — only ICS **export** exists; no CalDAV server or
-  import.
-- **Database board/gallery/calendar views** — only the table view is
-  implemented.
-- **2D molecular sketcher** — chemistry verifies SMILES and shows 3D; there is
-  no drag-to-place 2D sketcher (the whiteboard has a basic atom/bond tool).
-- **Message reactions UI** and **link/attachment previews** — persisted in the
-  API/model but not yet surfaced in the message UI.
-- **Browser push / profile photo upload** — not present (avatars are
-  initial-based placeholders).
-- **TURN relay** — STUN only by default; TURN not provisioned.
+- **CalDAV (two-way sync)** — ICS **import and export** both exist, but there
+  is no CalDAV protocol server for live two-way sync with external calendar
+  apps.
+- **Database calendar view** — table, board, and gallery views are implemented;
+  a calendar view is not.
+- **Group audio deployment** — the LiveKit token endpoint, `livekit-client`
+  join flow, and Docker service are all in place; actually making group-call
+  media work requires deploying the LiveKit server and setting the
+  `LIVEKIT_*` keys.
+- **TURN relay deployment** — STUN works out of the box and TURN is fully
+  wired (config + `coturn` service + frontend ICE servers); enabling it just
+  requires the coturn server and `TURN_URIS` to be configured.
+- **Browser push *deployment*** — the subscription flow, service worker, and
+  send path are wired; enabling delivery just requires setting the VAPID keys.
+- **Message attachments** (files/images) — not present; only link previews are
+  supported.
+- **No call recording** in 1:1 or group calls.
