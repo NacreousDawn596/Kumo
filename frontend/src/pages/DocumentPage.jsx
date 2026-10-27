@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Highlighter, Pen } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Highlighter, Pen } from "lucide-react";
 import { api, apiGet, apiPost } from "../api/client.js";
 import { Spinner } from "../components/ui.jsx";
 import "./document.css";
@@ -21,6 +21,7 @@ async function loadPdfjs() {
 
 export default function DocumentPage() {
   const { fileId } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const canvasRef = useRef(null);
   const overlayRef = useRef(null);
@@ -114,6 +115,10 @@ export default function DocumentPage() {
     return (
       <div className="document">
         <div className="doc-toolbar">
+          <button className="wb-tool" onClick={() => navigate(-1)} title="Back">
+            <ArrowLeft size={16} />
+          </button>
+          <span className="wb-sep" />
           <button className={`wb-tool ${tool === "pen" ? "wb-tool-active" : ""}`} onClick={() => setTool("pen")}>
             <Pen size={16} />
           </button>

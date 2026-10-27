@@ -25,6 +25,14 @@
   background: var(--surface-hover);
   color: var(--text-primary);
 }
+.wb-tool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.wb-tool:disabled:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
 .wb-tool-active {
   background: var(--accent-soft);
   color: var(--accent-text);
