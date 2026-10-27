@@ -55,6 +55,7 @@ def health():
 from app.auth.routes import router as auth_router  # noqa: E402
 from app.calendar.routes import router as calendar_router  # noqa: E402
 from app.calls.routes import router as calls_router  # noqa: E402
+from app.databases.routes import router as databases_router  # noqa: E402
 from app.collaboration.routes import router as collaboration_router  # noqa: E402
 from app.groups.routes import router as groups_router  # noqa: E402
 from app.knowledge.routes import router as knowledge_router  # noqa: E402
@@ -85,6 +86,7 @@ app.include_router(study_sessions_router, prefix="/api")
 app.include_router(whiteboards_router, prefix="/api")
 app.include_router(collaboration_router, prefix="/api")
 app.include_router(calls_router, prefix="/api")
+app.include_router(databases_router, prefix="/api")
 
 from app.realtime.routes import router as realtime_router  # noqa: E402
 

@@ -12,6 +12,7 @@ import {
   Plus,
   Search,
   Settings,
+  Table,
   Users,
   Video,
   Bell,
@@ -37,6 +38,7 @@ const NAV = [
   { to: "/tasks", label: "Tasks", icon: ListTodo },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/notes", label: "Notes", icon: FileText },
+  { to: "/databases", label: "Databases", icon: Table },
   { to: "/knowledge", label: "Knowledge", icon: Network },
   { to: "/vault", label: "Vault", icon: Folder },
 ];

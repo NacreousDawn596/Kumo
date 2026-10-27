@@ -11,6 +11,8 @@ import TasksPage from "./pages/TasksPage.jsx";
 import ProjectsPage from "./pages/ProjectsPage.jsx";
 import ProjectDetailPage from "./pages/ProjectDetailPage.jsx";
 import NotesPage from "./pages/NotesPage.jsx";
+import DatabasesPage from "./pages/DatabasesPage.jsx";
+import DatabasePage from "./pages/DatabasePage.jsx";
 import PageEditorPage from "./pages/PageEditorPage.jsx";
 import KnowledgePage from "./pages/KnowledgePage.jsx";
 import VaultPage from "./pages/VaultPage.jsx";
@@ -68,6 +70,8 @@ export default function App() {
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="notes" element={<NotesPage />} />
+        <Route path="databases" element={<DatabasesPage />} />
+        <Route path="databases/:dbId" element={<DatabasePage />} />
         <Route path="pages/:pageId" element={<PageEditorPage />} />
         <Route path="knowledge" element={<KnowledgePage />} />
         <Route path="vault" element={<VaultPage />} />
