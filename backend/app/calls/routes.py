@@ -33,11 +33,19 @@ def _livekit_configured() -> bool:
 
 @router.get("/config")
 def call_config(user: User = Depends(get_current_user)):
+    turn_servers = []
+    if settings.turn_uris:
+        for uri in [u.strip() for u in settings.turn_uris.split(",") if u.strip()]:
+            turn_servers.append({
+                "urls": uri,
+                "username": settings.turn_username,
+                "credential": settings.turn_credential,
+            })
     return {
         "media_provider": "peer",
         "group_sfu": "livekit" if _livekit_configured() else "none",
         "stun_servers": ["stun:stun.l.google.com:19302"],
-        "turn_servers": [],
+        "turn_servers": turn_servers,
         "recording_enabled": False,
     }
 

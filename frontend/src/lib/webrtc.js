@@ -3,6 +3,19 @@
 let pc = null;
 let localStream = null;
 let remoteAudio = null;
+let cachedIceServers = null;
+
+async function iceServers() {
+  if (cachedIceServers) return cachedIceServers;
+  try {
+    const res = await fetch("/api/calls/config", { credentials: "include" });
+    const cfg = await res.json();
+    cachedIceServers = [...cfg.stun_servers.map((u) => ({ urls: u })), ...cfg.turn_servers];
+  } catch {
+    cachedIceServers = [{ urls: "stun:stun.l.google.com:19302" }];
+  }
+  return cachedIceServers;
+}
 
 function ensureRemoteAudio() {
   if (!remoteAudio) {
@@ -12,10 +25,8 @@ function ensureRemoteAudio() {
   return remoteAudio;
 }
 
-function makePeerConnection() {
-  const connection = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  });
+async function makePeerConnection() {
+  const connection = new RTCPeerConnection({ iceServers: await iceServers() });
   connection.onicecandidate = (e) => {
     if (e.candidate) window.__kumoCallOnIce?.(e.candidate);
   };

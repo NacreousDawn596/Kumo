@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
 
+    # TURN relay (for WebRTC behind restrictive NATs). Comma-separated URIs.
+    turn_uris: str = ""
+    turn_username: str = ""
+    turn_credential: str = ""
+
     # Cookies
     cookie_secure: bool = False
     cookie_samesite: str = "lax"

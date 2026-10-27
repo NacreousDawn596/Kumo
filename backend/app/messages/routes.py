@@ -167,6 +167,29 @@ async def send_message(conversation_id: str, body: MessageIn, user: User = Depen
         envelope("message", f"conversation:{conversation_id}", user.id, {"message": _serialize_message(msg).model_dump(mode="json")}),
         exclude=user.id,
     )
+    # Notify the other members (in-app + web push, best effort).
+    from app.notifications import service as notif
+
+    others = db.execute(
+        select(ConversationMember).where(
+            ConversationMember.conversation_id == conversation_id,
+            ConversationMember.user_id != user.id,
+        )
+    ).scalars().all()
+    for member in others:
+        n = notif.notify(
+            db,
+            member.user_id,
+            type="message",
+            title=user.display_name,
+            body=body.body[:120],
+            resource_type="conversation",
+            resource_id=conversation_id,
+        )
+        db.add(n)
+    db.commit()
+    for member in others:
+        notif.send_push(db, member.user_id, user.display_name, body.body[:120])
     return _serialize_message(msg)
 
 

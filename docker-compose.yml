@@ -28,6 +28,22 @@ services:
     restart: unless-stopped
     profiles: ["livekit"]
 
+  coturn:
+    image: coturn/coturn:latest
+    command: -n --log-file=stdout --lt-cred-mech --fingerprint
+    environment:
+      TURN_PORT: 3478
+      TURN_USER: "${TURN_USERNAME:-kumo}"
+      TURN_REALM: kumo
+      TURN_SECRET: "${TURN_CREDENTIAL:-kumo-turn-secret}"
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "5349:5349"
+      - "5349:5349/udp"
+    restart: unless-stopped
+    profiles: ["livekit"]
+
   backend:
     build: ./backend
     environment:
@@ -44,6 +60,18 @@ services:
       SCHOOLAPP_WORKER_SECRET: ${SCHOOLAPP_WORKER_SECRET:-}
       SCHOOLAPP_WORKER_ISSUER: schoolapp-worker
       SCHOOLAPP_WORKER_AUDIENCE: kumo
+      # Web Push (VAPID).
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@kumo.example.com}
+      # LiveKit SFU (group audio).
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecret}
+      # TURN relay.
+      TURN_URIS: ${TURN_URIS:-}
+      TURN_USERNAME: ${TURN_USERNAME:-kumo}
+      TURN_CREDENTIAL: ${TURN_CREDENTIAL:-kumo-turn-secret}
     volumes:
       - kumo-data:/app/data
     depends_on:
