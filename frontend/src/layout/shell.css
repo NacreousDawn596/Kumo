@@ -55,19 +55,22 @@
   height: var(--input-height);
   padding: 0 10px;
   border-radius: var(--radius-md);
-  background: var(--accent);
-  color: #fff;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  margin-bottom: var(--sp-1);
+  margin-bottom: var(--sp-2);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
 }
 .quick-capture-btn:hover {
-  background: var(--accent-hover);
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
 }
 .quick-capture-btn .kbd {
   margin-left: auto;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
 }
 
 .kbd {
@@ -111,13 +114,10 @@
   color: var(--accent-text);
 }
 
-.sidebar-section-label {
-  font-size: var(--text-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  padding: var(--sp-3) var(--sp-2) var(--sp-1);
-  font-weight: var(--weight-semibold);
+.sidebar-section-gap {
+  height: 1px;
+  background: var(--border);
+  margin: var(--sp-2) var(--sp-1);
 }
 
 .sidebar-footer {

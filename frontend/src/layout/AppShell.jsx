@@ -95,7 +95,8 @@ export default function AppShell() {
         ))}
       </nav>
 
-      <div className="sidebar-section-label">Workspaces</div>
+      <div className="sidebar-section-gap" />
+
       <nav className="sidebar-nav">
         {NAV_SECONDARY.map(({ to, label, icon: Icon }) => (
           <NavLink

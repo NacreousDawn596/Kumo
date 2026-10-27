@@ -11,6 +11,10 @@
     color var(--dur-fast) var(--ease);
   white-space: nowrap;
   user-select: none;
+  /* default size (md) */
+  height: var(--input-height);
+  padding: 0 14px;
+  font-size: var(--text-sm);
 }
 .btn:disabled {
   opacity: 0.5;
