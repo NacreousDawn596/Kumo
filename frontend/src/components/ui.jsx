@@ -54,11 +54,12 @@ export function Select({ className = "", children, ...rest }) {
   );
 }
 
-export function Avatar({ name, size = 28, src }) {
+export function Avatar({ name, size = 28, src, userId }) {
   const initial = (name || "?").trim().charAt(0).toUpperCase();
+  const imgSrc = src || (userId ? `/api/users/${userId}/avatar` : null);
   return (
     <span className="avatar" style={{ width: size, height: size, fontSize: size * 0.42 }}>
-      {src ? <img src={src} alt="" loading="lazy" /> : initial}
+      {imgSrc ? <img src={imgSrc} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} /> : initial}
     </span>
   );
 }

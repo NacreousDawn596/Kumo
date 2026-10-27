@@ -5,12 +5,12 @@ import { Bell, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useAuth } from "../store/auth.js";
 import { useTheme } from "../store/theme.js";
 import { apiPatch } from "../api/client.js";
-import { Button, Input, Textarea } from "../components/ui.jsx";
+import { Avatar, Button, Input, Textarea } from "../components/ui.jsx";
 import StorageMeter from "../components/StorageMeter.jsx";
 import { registerAndSubscribe, unsubscribe } from "../lib/push.js";
 import "../styles/pages.css";
 import "./settings.css";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const SECTIONS = [
   { id: "appearance", label: "Appearance" },
@@ -128,6 +128,7 @@ function AppearanceSection() {
 function ProfileSection() {
   const { user, setUser } = useAuth();
   const queryClient = useQueryClient();
+  const fileRef = useRef(null);
   const [form, setForm] = useState({
     display_name: user?.display_name || "",
     bio: user?.bio || "",
@@ -142,10 +143,32 @@ function ProfileSection() {
     },
   });
 
+  const uploadAvatar = useMutation({
+    mutationFn: (file) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return fetch("/api/users/me/avatar", { method: "POST", credentials: "include", body: fd }).then((r) => r.json());
+    },
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+
+  const onAvatarPick = (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) uploadAvatar.mutate(f);
+  };
+
   return (
     <div>
       <h1 className="page-title">Profile</h1>
       <div className="settings-form">
+        <div className="avatar-upload">
+          <Avatar name={user?.display_name} userId={user?.id} size={56} />
+          <button className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()}>
+            {uploadAvatar.isPending ? "Uploading…" : "Change photo"}
+          </button>
+          <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={onAvatarPick} />
+        </div>
         <label className="auth-label">
           Display name
           <Input value={form.display_name} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} />
