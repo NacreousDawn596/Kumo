@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Folder, ListTodo, Search, Users } from "lucide-react";
+import { FileText, Folder, ListTodo, Search, UserRound, Users } from "lucide-react";
 import { api } from "../api/client.js";
 import { Input } from "../components/ui.jsx";
 import "../styles/pages.css";
@@ -11,6 +11,7 @@ const TYPE_ICON = {
   file: Folder,
   task: ListTodo,
   group: Users,
+  user: UserRound,
 };
 
 function resultPath(r) {
@@ -21,6 +22,8 @@ function resultPath(r) {
       return "/tasks";
     case "group":
       return `/groups/${r.id}`;
+    case "user":
+      return "/messages";
     default:
       return "/vault";
   }

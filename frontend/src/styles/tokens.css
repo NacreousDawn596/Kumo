@@ -1,8 +1,8 @@
 /* Kumo design tokens — the single source of truth for color, type, spacing.
  *
- * The identity comes from proportion, typography, and a restrained purple
- * accent — not from gradients, shadows, or decoration. Both themes share the
- * same semantic rules; the dark theme is a deliberate design, not an inversion.
+ * The identity comes from proportion, typography, and a restrained accent —
+ * not from gradients, shadows, or decoration. Accent color, corner radius, and
+ * text scale are all user-adjustable.
  */
 
 :root {
@@ -45,12 +45,16 @@
   --sp-12: 48px;
   --sp-16: 64px;
 
-  /* Radius — small, deliberate scale */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 9px;
-  --radius-xl: 13px;
+  /* Radius — adjustable via --radius-scale (set by settings). */
+  --radius-scale: 1;
+  --radius-sm: calc(4px * var(--radius-scale));
+  --radius-md: calc(6px * var(--radius-scale));
+  --radius-lg: calc(9px * var(--radius-scale));
+  --radius-xl: calc(13px * var(--radius-scale));
   --radius-full: 999px;
+
+  /* Text scale — adjustable via --font-scale (set by settings). */
+  --font-scale: 1;
 
   /* Layout */
   --sidebar-width: 240px;
@@ -66,13 +70,26 @@
   --dur-fast: 100ms;
   --dur-normal: 160ms;
   --dur-slow: 240ms;
-
-  /* Brand purple (shared) */
-  --purple: #7c2bb4;
-  --purple-hover: #8f3cc6;
-  --purple-deep: #5e1f8a;
-  --purple-highlight: #a66bff;
 }
+
+/* Global font scaling (1rem = 16px * scale). */
+html {
+  font-size: calc(16px * var(--font-scale, 1));
+}
+
+/* ------------------------------------------------------------------------- */
+/* Accent themes — 8 colors. `data-accent` picks the brand color; the derived  */
+/* hover/text/soft tones are computed per light/dark appearance below.        */
+/* ------------------------------------------------------------------------- */
+:root,
+[data-accent="purple"] { --accent: #7c2bb4; }
+[data-accent="blue"]   { --accent: #2563eb; }
+[data-accent="indigo"] { --accent: #4f46e5; }
+[data-accent="teal"]   { --accent: #0d9488; }
+[data-accent="green"]  { --accent: #16a34a; }
+[data-accent="orange"] { --accent: #ea580c; }
+[data-accent="rose"]   { --accent: #e11d48; }
+[data-accent="cyan"]   { --accent: #0891b2; }
 
 /* ------------------------------------------------------------------------- */
 /* Dark appearance (default) — deep, warm, never pure black                   */
@@ -96,10 +113,9 @@
   --border: #23202b;
   --border-strong: #322d3d;
 
-  --accent: var(--purple);
-  --accent-hover: var(--purple-hover);
-  --accent-text: #d3b5f0;
-  --accent-soft: rgba(124, 43, 180, 0.18);
+  --accent-hover: color-mix(in srgb, var(--accent) 80%, white);
+  --accent-text: color-mix(in srgb, var(--accent) 70%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 20%, transparent);
   --on-accent: #ffffff;
 
   --success: #3bb97b;
@@ -111,8 +127,8 @@
   --info: #4c8dff;
   --info-soft: rgba(76, 141, 255, 0.15);
 
-  --selection: rgba(166, 107, 255, 0.32);
-  --focus-ring: var(--purple-highlight);
+  --selection: color-mix(in srgb, var(--accent) 30%, transparent);
+  --focus-ring: color-mix(in srgb, var(--accent) 70%, white);
   --presence-online: #3bb97b;
   --presence-away: #d9a02b;
   --presence-offline: #56515f;
@@ -143,10 +159,9 @@
   --border: #e7e3eb;
   --border-strong: #d8d3df;
 
-  --accent: var(--purple);
-  --accent-hover: var(--purple-deep);
-  --accent-text: #6a259c;
-  --accent-soft: #efe5f7;
+  --accent-hover: color-mix(in srgb, var(--accent) 80%, black);
+  --accent-text: color-mix(in srgb, var(--accent) 78%, #111);
+  --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
   --on-accent: #ffffff;
 
   --success: #1f8a55;
@@ -158,8 +173,8 @@
   --info: #2f6bdc;
   --info-soft: #e6eefc;
 
-  --selection: #ece1f5;
-  --focus-ring: var(--purple);
+  --selection: color-mix(in srgb, var(--accent) 16%, white);
+  --focus-ring: var(--accent);
   --presence-online: #1f8a55;
   --presence-away: #a56b0e;
   --presence-offline: #a49eac;

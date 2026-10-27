@@ -45,29 +45,79 @@ export default function SettingsPage() {
 }
 
 function AppearanceSection() {
-  const { preference, apply } = useTheme();
+  const { mode, accent, radiusScale, fontScale, setMode, setAccent, setRadius, setFontScale } = useTheme();
   const options = [
     { id: "light", label: "Light", icon: Sun },
     { id: "dark", label: "Dark", icon: Moon },
     { id: "system", label: "System", icon: Monitor },
   ];
 
+  const accentColors = {
+    purple: "#7c2bb4",
+    blue: "#2563eb",
+    indigo: "#4f46e5",
+    teal: "#0d9488",
+    green: "#16a34a",
+    orange: "#ea580c",
+    rose: "#e11d48",
+    cyan: "#0891b2",
+  };
+
   return (
     <div>
       <h1 className="page-title">Appearance</h1>
-      <p className="page-subtitle">Theme</p>
+
+      <h2 className="settings-subtitle">Mode</h2>
       <div className="theme-options">
         {options.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            className={`theme-option ${preference === id ? "theme-option-active" : ""}`}
-            onClick={() => apply(id)}
+            className={`theme-option ${mode === id ? "theme-option-active" : ""}`}
+            onClick={() => setMode(id)}
           >
             <Icon size={16} />
             {label}
           </button>
         ))}
       </div>
+
+      <h2 className="settings-subtitle">Accent color</h2>
+      <div className="accent-swatches">
+        {Object.entries(accentColors).map(([name, color]) => (
+          <button
+            key={name}
+            className={`accent-swatch ${accent === name ? "accent-swatch-active" : ""}`}
+            style={{ background: color }}
+            title={name}
+            aria-label={name}
+            onClick={() => setAccent(name)}
+          />
+        ))}
+      </div>
+
+      <h2 className="settings-subtitle">
+        Corner radius — {Math.round(radiusScale * 100)}%
+      </h2>
+      <input
+        type="range"
+        min="0.5"
+        max="2"
+        step="0.1"
+        value={radiusScale}
+        onChange={(e) => setRadius(e.target.value)}
+      />
+
+      <h2 className="settings-subtitle">
+        Text size — {Math.round(fontScale * 100)}%
+      </h2>
+      <input
+        type="range"
+        min="0.85"
+        max="1.4"
+        step="0.05"
+        value={fontScale}
+        onChange={(e) => setFontScale(e.target.value)}
+      />
     </div>
   );
 }

@@ -51,9 +51,7 @@ export default function PageEditorPage() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState([]);
-  const [conflict, setConflict] = useState(false);
   const initializedFor = useRef(null);
-  const versionRef = useRef(0);
 
   const { data: page, isLoading } = useQuery({
     queryKey: ["page", pageId],
@@ -63,7 +61,6 @@ export default function PageEditorPage() {
   useEffect(() => {
     if (page && initializedFor.current !== pageId) {
       setTitle(page.title);
-      versionRef.current = page.version || 0;
       setBlocks(
         page.blocks.map((b) => ({
           id: b.id,
@@ -87,15 +84,7 @@ export default function PageEditorPage() {
   });
 
   const saveBlocks = useMutation({
-    mutationFn: ({ bs }) =>
-      api(`/api/pages/${pageId}/blocks?expected_version=${versionRef.current}`, { method: "PUT", body: bs }),
-    onSuccess: () => {
-      setConflict(false);
-      versionRef.current += 1;
-    },
-    onError: (err) => {
-      if (err.status === 409) setConflict(true);
-    },
+    mutationFn: ({ bs }) => api(`/api/pages/${pageId}/blocks`, { method: "PUT", body: bs }),
   });
 
   const blocksRef = useRef([]);
@@ -105,14 +94,16 @@ export default function PageEditorPage() {
     blocksRef.current = blocks;
   }, [blocks]);
 
-  const saveNow = (bs) => {
+  const doSave = () => {
     if (!dirtyRef.current) return;
     dirtyRef.current = false;
-    saveBlocks.mutate({ bs: bs.map(({ id, block_type, content }) => ({ id, block_type, content })) });
+    saveBlocks.mutate({
+      bs: blocksRef.current.map(({ id, block_type, content }) => ({ id, block_type, content })),
+    });
   };
 
   const debouncedSaveTitle = useRef(debounce((t) => saveTitle.mutate(t), 500)).current;
-  const debouncedSaveBlocks = useRef(debounce(() => saveNow(blocksRef.current), 700)).current;
+  const debouncedSaveBlocks = useRef(debounce(doSave, 600)).current;
 
   const persist = (next) => {
     setBlocks(next);
@@ -120,17 +111,12 @@ export default function PageEditorPage() {
     debouncedSaveBlocks();
   };
 
-  // Flush any pending block save when the user navigates away or unmounts.
+  // Flush any pending block save when the user navigates away, blurs, or unmounts.
   const flushRef = useRef(null);
   useEffect(() => {
     flushRef.current = () => {
       debouncedSaveBlocks.cancel();
-      if (dirtyRef.current) {
-        dirtyRef.current = false;
-        saveBlocks.mutate({
-          bs: blocksRef.current.map(({ id, block_type, content }) => ({ id, block_type, content })),
-        });
-      }
+      doSave();
     };
   });
 
@@ -165,19 +151,12 @@ export default function PageEditorPage() {
   if (isLoading) return <div className="page page-narrow" />;
 
   return (
-    <div className="page editor-page">
+    <div className="page editor-page" onBlur={() => flushRef.current?.()}>
       <div className="editor-toolbar">
         <Link to="/notes" className="btn btn-ghost btn-sm">
           <Undo2 size={14} /> Notes
         </Link>
       </div>
-
-      {conflict && (
-        <div className="editor-conflict" role="alert">
-          This page was edited by someone else. Reload to merge their changes —
-          your unsaved edits are kept here until you save again.
-        </div>
-      )}
 
       <div className="editor">
         <input

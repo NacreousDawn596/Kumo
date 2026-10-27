@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./store/auth.js";
-import { useTheme } from "./store/theme.js";
 import AppShell from "./layout/AppShell.jsx";
 import { Spinner } from "./components/ui.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
@@ -14,6 +13,7 @@ import PageEditorPage from "./pages/PageEditorPage.jsx";
 import KnowledgePage from "./pages/KnowledgePage.jsx";
 import VaultPage from "./pages/VaultPage.jsx";
 import SessionsPage from "./pages/SessionsPage.jsx";
+import StudyRoomPage from "./pages/StudyRoomPage.jsx";
 import GroupsPage from "./pages/GroupsPage.jsx";
 import SearchPage from "./pages/SearchPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
@@ -39,22 +39,10 @@ function Protected({ children }) {
 
 export default function App() {
   const loadUser = useAuth((s) => s.loadUser);
-  const { preference } = useTheme();
 
   useEffect(() => {
     loadUser();
   }, [loadUser]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute(
-      "data-theme",
-      preference === "system"
-        ? window.matchMedia("(prefers-color-scheme: light)").matches
-          ? "light"
-          : "dark"
-        : preference
-    );
-  }, [preference]);
 
   return (
     <Routes>
@@ -79,6 +67,7 @@ export default function App() {
         <Route path="knowledge" element={<KnowledgePage />} />
         <Route path="vault" element={<VaultPage />} />
         <Route path="sessions" element={<SessionsPage />} />
+        <Route path="sessions/:sessionId" element={<StudyRoomPage />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="groups/:groupId" element={<GroupsPage />} />
         <Route path="search" element={<SearchPage />} />

@@ -46,13 +46,13 @@ const NAV_SECONDARY = [
 
 export default function AppShell() {
   const { user, logout } = useAuth();
-  const { preference, apply } = useTheme();
+  const { mode, resolved, setMode } = useTheme();
   const openPalette = useCommandPalette((s) => s.openPalette);
   const [quickCapture, setQuickCapture] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
 
-  const ThemeIcon = preference === "dark" ? Moon : preference === "light" ? Sun : Monitor;
+  const ThemeIcon = mode === "dark" ? Moon : mode === "light" ? Sun : Monitor;
 
   useEffect(() => {
     const onKey = (e) => {
@@ -168,7 +168,7 @@ export default function AppShell() {
             <button
               className="theme-toggle"
               onClick={() =>
-                apply(preference === "dark" ? "light" : preference === "light" ? "system" : "dark")
+                setMode(mode === "dark" ? "light" : mode === "light" ? "system" : "dark")
               }
               aria-label="Toggle theme"
             >

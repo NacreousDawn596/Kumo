@@ -59,6 +59,27 @@ def _require_role(db: Session, user: User, group_id: str, minimum: str) -> Group
     return group
 
 
+def _add_member(db: Session, group: Group, user_id: str, role: str = "member") -> None:
+    """Add a user to a group AND its group conversation (kept in sync)."""
+    existing = db.execute(
+        select(GroupMember).where(GroupMember.group_id == group.id, GroupMember.user_id == user_id)
+    ).scalar_one_or_none()
+    if existing is None:
+        db.add(GroupMember(group_id=group.id, user_id=user_id, role=role))
+    conv = db.execute(
+        select(Conversation).where(Conversation.group_id == group.id)
+    ).scalar_one_or_none()
+    if conv is not None:
+        cm = db.execute(
+            select(ConversationMember).where(
+                ConversationMember.conversation_id == conv.id,
+                ConversationMember.user_id == user_id,
+            )
+        ).scalar_one_or_none()
+        if cm is None:
+            db.add(ConversationMember(conversation_id=conv.id, user_id=user_id))
+
+
 @router.get("")
 def list_groups(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ids = [m.group_id for m in db.execute(select(GroupMember).where(GroupMember.user_id == user.id)).scalars()]
@@ -108,6 +129,11 @@ class InviteIn(BaseModel):
     role: str = "member"
 
 
+class AddMemberIn(BaseModel):
+    user_id: str
+    role: str = "member"
+
+
 @router.post("/{group_id}/invitations", status_code=status.HTTP_201_CREATED)
 def invite(group_id: str, body: InviteIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     _require_role(db, user, group_id, "admin")
@@ -116,6 +142,47 @@ def invite(group_id: str, body: InviteIn, user: User = Depends(get_current_user)
     db.commit()
     db.refresh(invite)
     return {"id": invite.id, "status": invite.status}
+
+
+@router.post("/{group_id}/members", status_code=status.HTTP_201_CREATED)
+def add_member(group_id: str, body: AddMemberIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    group = _require_role(db, user, group_id, "admin")
+    target = db.get(User, body.user_id)
+    if target is None or not target.is_active:
+        raise HTTPException(status_code=404, detail="User not found")
+    if body.role not in ROLE_RANK:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    _add_member(db, group, body.user_id, body.role)
+    db.commit()
+    return _out(db, group, user)
+
+
+@router.post("/{group_id}/join")
+def join_group(group_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    group = db.get(Group, group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if is_group_member(db, user.id, group_id):
+        return _out(db, group, user)
+    _add_member(db, group, user.id, "member")
+    db.commit()
+    return _out(db, group, user)
+
+
+@router.post("/invitations/{invitation_id}/accept")
+def accept_invitation(invitation_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    invite = db.get(GroupInvitation, invitation_id)
+    if invite is None or invite.status != "pending":
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    if invite.invitee_id is not None and invite.invitee_id != user.id:
+        raise HTTPException(status_code=403, detail="Invitation is not for you")
+    group = db.get(Group, invite.group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    _add_member(db, group, user.id, invite.role)
+    invite.status = "accepted"
+    db.commit()
+    return _out(db, group, user)
 
 
 @router.get("/{group_id}/invitations")

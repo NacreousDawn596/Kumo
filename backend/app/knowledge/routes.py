@@ -75,4 +75,18 @@ def search(
         for g in groups:
             results.append({"type": "group", "id": g.id, "title": g.name, "snippet": None})
 
+    if kind in (None, "user"):
+        users = db.execute(
+            select(User).where(
+                User.is_active.is_(True),
+                or_(User.username.ilike(like), User.display_name.ilike(like)),
+            ).limit(limit)
+        ).scalars().all()
+        for u in users:
+            if u.id == user.id:
+                continue
+            results.append(
+                {"type": "user", "id": u.id, "title": u.display_name, "snippet": f"@{u.username}"}
+            )
+
     return results[:limit]

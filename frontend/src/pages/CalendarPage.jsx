@@ -37,6 +37,12 @@ export default function CalendarPage() {
       ),
   });
 
+  // Tasks with due dates are shown on the calendar as deadline items.
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => api("/api/tasks"),
+  });
+
   const create = useMutation({
     mutationFn: () =>
       apiPost("/api/calendar", {
@@ -78,6 +84,9 @@ export default function CalendarPage() {
       <div className="cal-grid">
         {days.map((day) => {
           const dayEvents = events.filter((e) => isSameDay(new Date(e.start_at), day));
+          const dayTasks = tasks.filter(
+            (t) => t.due_date && t.status !== "done" && isSameDay(new Date(t.due_date), day)
+          );
           return (
             <div
               key={day.toISOString()}
@@ -90,6 +99,11 @@ export default function CalendarPage() {
                 {dayEvents.slice(0, 3).map((e) => (
                   <div key={e.id} className="cal-event" title={e.title}>
                     {e.title}
+                  </div>
+                ))}
+                {dayTasks.map((t) => (
+                  <div key={t.id} className="cal-task" title={`Task: ${t.title}`}>
+                    {t.title}
                   </div>
                 ))}
                 {dayEvents.length > 3 && <div className="cal-more">+{dayEvents.length - 3}</div>}

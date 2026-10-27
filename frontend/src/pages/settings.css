@@ -63,3 +63,40 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
 }
+
+.settings-subtitle {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  margin: var(--sp-5) 0 var(--sp-2);
+  color: var(--text-primary);
+}
+.settings-subtitle:first-of-type {
+  margin-top: var(--sp-2);
+}
+
+.accent-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.accent-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.accent-swatch:hover {
+  transform: scale(1.08);
+}
+.accent-swatch-active {
+  border-color: var(--text-primary);
+}
+
+input[type="range"] {
+  width: 100%;
+  max-width: 320px;
+  accent-color: var(--accent);
+  height: 6px;
+}

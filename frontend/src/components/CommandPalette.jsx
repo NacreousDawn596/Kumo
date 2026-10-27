@@ -8,6 +8,7 @@ import {
   ListTodo,
   Plus,
   Search,
+  UserRound,
   Users,
   Video,
   CalendarPlus,
@@ -22,6 +23,7 @@ const TYPE_ICON = {
   file: Folder,
   task: ListTodo,
   group: Users,
+  user: UserRound,
 };
 
 const ACTIONS = [
@@ -130,6 +132,8 @@ function resolvePath(item) {
       return `/tasks`;
     case "group":
       return `/groups/${item.id}`;
+    case "user":
+      return `/messages`;
     default:
       return "/";
   }
