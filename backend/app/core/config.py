@@ -26,21 +26,13 @@ class Settings(BaseSettings):
     storage_path: str = "./data/storage"
 
     # Security
-    secret_key: str = "change-me-in-production"
+    secret_key: str = ""
     session_ttl_seconds: int = 60 * 60 * 24 * 30  # 30 days refresh
     access_token_ttl_seconds: int = 60 * 15  # 15 minutes
 
     # Auth provider
     auth_provider: str = "local"  # "local" | "schoolapp"
 
-    # SchoolApp (documented scaffold — real endpoints TBD with provider)
-    schoolapp_issuer: str = ""
-    schoolapp_client_id: str = ""
-    schoolapp_client_secret: str = ""
-    schoolapp_authorize_url: str = ""
-    schoolapp_token_url: str = ""
-    schoolapp_jwks_url: str = ""
-    schoolapp_audience: str = ""
     # Shared secret with the Cloudflare Worker that verifies SchoolApp identity.
     # The Worker signs a short-lived assertion with this HMAC key; the backend
     # verifies it. Must match the WORKER's SCHOOLAPP_WORKER_SECRET.

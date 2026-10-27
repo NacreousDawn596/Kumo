@@ -11,7 +11,6 @@ from app.auth.schemas import (
     LoginRequest,
     RegisterRequest,
     SchoolAppAssertionRequest,
-    SchoolAppStartRequest,
 )
 from app.core.config import settings
 from app.core.database import get_db
@@ -118,16 +117,6 @@ def ws_ticket(user: User = Depends(get_current_user)):
 
     ticket = sign_access_token({"sub": user.id, "purpose": "ws"}, expires_seconds=30)
     return {"ticket": ticket}
-
-
-@router.post("/schoolapp/start")
-def schoolapp_start(body: SchoolAppStartRequest):
-    # Anti-forgery state + redirect to the provider's authorize endpoint would
-    # be generated here once the provider contract is configured.
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="SchoolApp integration requires the provider endpoints (see infra/schoolapp-worker).",
-    )
 
 
 @router.post("/schoolapp/assert", response_model=UserOut)

@@ -1,16 +1,9 @@
 """Identity provider abstraction.
 
-Kumo's preferred identity provider is SchoolApp. Because the concrete
-SchoolApp OIDC/OAuth contract (authorization endpoint, token endpoint, JWKS,
-and subject claim) is provider-specific and not yet documented here, this
-module defines a clean adapter boundary plus:
-
-  * a working ``local`` provider (email + password, Argon2id) for development
-    and for tests, and
-  * a ``schoolapp`` provider that is an honest, documented scaffold: it raises
-    a clear "not configured" error until the provider endpoints are supplied.
-
-Nothing here scrapes credentials or invents undocumented endpoints.
+Kumo authenticates students through SchoolApp. The SchoolApp Cloudflare Worker
+verifies the student's credentials and returns a short-lived HMAC-signed
+assertion, which this module verifies (signature, issuer, audience, expiry).
+A local email/password provider backs the backend API and tests.
 """
 
 from __future__ import annotations

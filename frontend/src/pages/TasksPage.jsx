@@ -20,11 +20,19 @@ export default function TasksPage() {
   const [priority, setPriority] = useState("none");
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
+  const [projectId, setProjectId] = useState("");
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks"],
     queryFn: () => api("/api/tasks"),
   });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => api("/api/projects"),
+  });
+
+  const projectName = (id) => projects.find((p) => p.id === id)?.name;
 
   const create = useMutation({
     mutationFn: () =>
@@ -34,6 +42,7 @@ export default function TasksPage() {
         priority,
         description,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
+        project_id: projectId || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -41,6 +50,7 @@ export default function TasksPage() {
       setTitle("");
       setDescription("");
       setDueDate("");
+      setProjectId("");
     },
   });
 
@@ -91,6 +101,7 @@ export default function TasksPage() {
                     <span className={`task-title ${t.status === "done" ? "task-title-done" : ""}`}>
                       {t.title}
                     </span>
+                    {t.project_id && <span className="task-project">{projectName(t.project_id)}</span>}
                     {t.priority !== "none" && <span className="task-priority">{t.priority}</span>}
                     {t.due_date && <span className="task-due">{format(new Date(t.due_date), "MMM d")}</span>}
                   </div>
@@ -115,6 +126,12 @@ export default function TasksPage() {
         <div className="note-create">
           <Input autoFocus placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Textarea placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
+          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <option value="">No project</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
           <div style={{ display: "flex", gap: 8 }}>
             <Select value={status} onChange={(e) => setStatus(e.target.value)}>
               {STATUSES.map((s) => (

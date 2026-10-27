@@ -304,9 +304,6 @@ function NotificationsSection() {
           <span className="share-toggle-knob" />
         </button>
       </div>
-      <p className="page-subtitle" style={{ marginTop: 12 }}>
-        Push notifications require the server's VAPID keys to be configured.
-      </p>
     </div>
   );
 }

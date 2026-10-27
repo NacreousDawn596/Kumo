@@ -15,10 +15,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class SchoolAppStartRequest(BaseModel):
-    redirect_uri: str | None = None
-
-
 class SchoolAppAssertionRequest(BaseModel):
     assertion: str
 
