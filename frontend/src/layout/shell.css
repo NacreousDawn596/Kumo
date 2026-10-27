@@ -216,9 +216,11 @@
   min-width: 0;
 }
 
-/* Mobile drawer */
+/* Desktop sidebar wrapper — flex so the sidebar fills full height. */
 .sidebar-desktop {
-  display: block;
+  display: flex;
+  height: 100%;
+  flex-shrink: 0;
 }
 .mobile-drawer-overlay {
   position: fixed;
