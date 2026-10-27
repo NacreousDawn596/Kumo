@@ -100,11 +100,21 @@ function extractName(profile) {
   const p = profile || {};
   const basic = p.basic_info || {};
   const personal = p.personal_info || {};
-  if (basic.full_name) return basic.full_name;
-  if (personal.Nom || personal["Prénom"]) {
-    return `${personal["Prénom"] || ""} ${personal.Nom || ""}`.trim();
-  }
-  return null;
+  // Prefer the clean Prénom/Nom fields, then the sidebar role, then full_name.
+  const prenom = (personal["Prénom"] || "").trim();
+  const nom = (personal["Nom"] || "").trim();
+  if (prenom || nom) return `${prenom} ${nom}`.trim();
+  const role = (basic.role || "").trim();
+  if (role) return role;
+  const full = (basic.full_name || "").replace(/\s+/g, " ").trim();
+  return full.replace(/\s*student\s*$/i, "").trim() || null;
+}
+
+function extractEmail(profile, loginEmail) {
+  const p = profile || {};
+  const contact = p.contact_info || {};
+  const email = (contact.Email || "").trim();
+  return email || loginEmail;
 }
 
 async function verifyCredentials(env, email, password) {
@@ -118,7 +128,7 @@ async function verifyCredentials(env, email, password) {
 
   return {
     sub: subject,
-    email: email,
+    email: extractEmail(profile, email),
     name: extractName(profile),
   };
 }

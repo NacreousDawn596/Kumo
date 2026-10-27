@@ -44,8 +44,9 @@ npm install
 npm run dev        # http://localhost:5173 (proxies /api to :8000)
 ```
 
-Create an account at `/register`. Auth defaults to the local provider; see
-`infra/schoolapp-worker/` for the SchoolApp integration boundary.
+Create an account at `/register`, or sign in with **SchoolApp** (identity
+verified via a deployed Cloudflare Worker — see `infra/schoolapp-worker/`).
+Local email/password auth is the default fallback.
 
 ## Production (Docker Compose)
 

@@ -41,14 +41,14 @@ because a UI element, route, or table exists.
 
 ## Implemented but not yet exercised in production
 
-- **SchoolApp sign-in (live)** — the Cloudflare Worker is written and bundles
-  correctly; it verifies SchoolApp credentials via `schoolapp.js` and signs an
-  assertion the backend verifies (round-trip tested cross-language). It has
-  **not** been deployed or live-tested against the SchoolApp server, because
-  (a) this dev environment cannot reach `schoolapp.ensam-umi.ac.ma` (the
-  connection times out — the server appears to restrict non-Moroccan/academic
-  networks), and (b) no Cloudflare credentials were available to run
-  `wrangler deploy`.
+- **SchoolApp sign-in (deployed, live-tested)** — the Cloudflare Worker is
+  deployed at `https://schoolapp-worker.nacreousdawn596.workers.dev`. It
+  verifies SchoolApp credentials via `schoolapp.js` and returns a 120s
+  HMAC-signed assertion the backend verifies. Live-tested end-to-end with a
+  real account: login → profile (`Code` = stable subject) → assertion →
+  backend session. Secrets (`SCHOOLAPP_WORKER_SECRET`, `ALLOWED_ORIGIN`) are
+  set on the Worker via `wrangler secret put`; the backend `.env` holds the
+  matching secret and the frontend `.env` points at the Worker URL.
 - Realtime across **multiple backend instances** (single-instance in-process
   connection manager; needs a shared pub/sub bus — e.g. Redis — for >1 worker).
 - **Group audio** via SFU (LiveKit adapter stubbed; one-to-one is peer WebRTC
@@ -56,7 +56,9 @@ because a UI element, route, or table exists.
 
 ## Not implemented (documented, not faked)
 
-- **SchoolApp data sync** beyond identity (grades/attendance import into Kumo).
+- **SchoolApp data import** into Kumo (grades/attendance — only identity is
+  used for auth; retrieval script provided in
+  `infra/schoolapp-worker/scripts/`).
 - **Formula fields** in databases (typed properties/relations exist).
 - **Recurrence rules** for tasks/events (schema field present only).
 - **Browser push notifications** (in-app notification center exists).

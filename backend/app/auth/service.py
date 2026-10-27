@@ -126,7 +126,7 @@ def find_or_create_for_identity(
         user = db.execute(select(User).where(User.email == email.lower())).scalar_one_or_none()
 
     if user is None:
-        base = (email or f"{provider}_{subject[:8]}").lower()
+        base = _username_base(provider, subject, email, display_name)
         username = _unique_username(db, base)
         user = User(
             email=(email or "").lower() or f"{provider}_{subject}@kumo.local",
@@ -140,6 +140,21 @@ def find_or_create_for_identity(
     db.add(ExternalIdentity(user_id=user.id, provider=provider, subject=subject))
     db.commit()
     return user
+
+
+def _username_base(provider: str, subject: str, email: str | None, display_name: str | None) -> str:
+    """Derive a clean, normalized username for a new identity-linked account."""
+    if display_name:
+        slug = "".join(c if c.isalnum() else "-" for c in display_name.lower()).strip("-")
+        slug = "-".join(part for part in slug.split("-") if part)
+        if slug:
+            return slug
+    if email:
+        local = email.split("@", 1)[0].lower()
+        local = "".join(c if c.isalnum() else "-" for c in local).strip("-")
+        if local:
+            return local
+    return f"{provider}-{subject.lower()}"
 
 
 def _unique_username(db: Session, base: str) -> str:
