@@ -4,7 +4,6 @@ import { format } from "date-fns";
 import { ArrowRight, Calendar, FileText, Folder, ListTodo, MessageSquare, Video } from "lucide-react";
 import { api } from "../api/client.js";
 import { useAuth } from "../store/auth.js";
-import { EmptyState, Spinner } from "../components/ui.jsx";
 import "../styles/pages.css";
 import "./home.css";
 
@@ -76,7 +75,7 @@ export default function HomePage() {
       </div>
 
       {isNew && (
-        <div className="home-welcome card">
+        <div className="home-welcome">
           <h3>Welcome to Kumo</h3>
           <p>
             Your notes, files, tasks, and study rooms live together here. Start by
@@ -95,9 +94,9 @@ export default function HomePage() {
             {events.length === 0 ? (
               <p className="home-muted">No events today.</p>
             ) : (
-              <div className="card">
+              <div className="home-list">
                 {events.slice(0, 5).map((e) => (
-                  <div key={e.id} className="card-row">
+                  <div key={e.id} className="home-row">
                     <Calendar size={15} className="home-row-icon" />
                     <div className="home-row-main">
                       <div className="home-row-title">{e.title}</div>
@@ -115,9 +114,9 @@ export default function HomePage() {
             {dueSoon.length === 0 ? (
               <p className="home-muted">Nothing due soon.</p>
             ) : (
-              <div className="card">
+              <div className="home-list">
                 {dueSoon.map((t) => (
-                  <div key={t.id} className="card-row">
+                  <div key={t.id} className="home-row">
                     <ListTodo size={15} className="home-row-icon" />
                     <div className="home-row-main">
                       <div className="home-row-title">{t.title}</div>
@@ -135,9 +134,9 @@ export default function HomePage() {
             {recentPages.length === 0 ? (
               <p className="home-muted">No notes yet.</p>
             ) : (
-              <div className="card">
+              <div className="home-list">
                 {recentPages.map((p) => (
-                  <Link key={p.id} to={`/pages/${p.id}`} className="card-row">
+                  <Link key={p.id} to={`/pages/${p.id}`} className="home-row">
                     <FileText size={15} className="home-row-icon" />
                     <div className="home-row-main">
                       <div className="home-row-title">{p.title}</div>
@@ -154,9 +153,9 @@ export default function HomePage() {
             {recentFiles.length === 0 ? (
               <p className="home-muted">No documents yet.</p>
             ) : (
-              <div className="card">
+              <div className="home-list">
                 {recentFiles.map((f) => (
-                  <Link key={f.id} to="/vault" className="card-row">
+                  <Link key={f.id} to="/vault" className="home-row">
                     <Folder size={15} className="home-row-icon" />
                     <div className="home-row-main">
                       <div className="home-row-title">{f.name}</div>
@@ -171,9 +170,9 @@ export default function HomePage() {
             {activeSessions.length === 0 ? (
               <p className="home-muted">No active sessions.</p>
             ) : (
-              <div className="card">
+              <div className="home-list">
                 {activeSessions.map((s) => (
-                  <Link key={s.id} to="/sessions" className="card-row">
+                  <Link key={s.id} to="/sessions" className="home-row">
                     <Video size={15} className="home-row-icon" />
                     <div className="home-row-main">
                       <div className="home-row-title">{s.name}</div>
@@ -188,9 +187,9 @@ export default function HomePage() {
             {recentConvos.length === 0 ? (
               <p className="home-muted">No conversations yet.</p>
             ) : (
-              <div className="card">
+              <div className="home-list">
                 {recentConvos.map((c) => (
-                  <Link key={c.id} to={`/messages/${c.id}`} className="card-row">
+                  <Link key={c.id} to={`/messages/${c.id}`} className="home-row">
                     <MessageSquare size={15} className="home-row-icon" />
                     <div className="home-row-main">
                       <div className="home-row-title">

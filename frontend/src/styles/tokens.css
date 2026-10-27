@@ -1,23 +1,28 @@
-/* Kumo design tokens — the single source of truth for color, type, spacing. */
+/* Kumo design tokens — the single source of truth for color, type, spacing.
+ *
+ * The identity comes from proportion, typography, and a restrained purple
+ * accent — not from gradients, shadows, or decoration. Both themes share the
+ * same semantic rules; the dark theme is a deliberate design, not an inversion.
+ */
 
 :root {
-  /* Typography */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
-  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "Fira Code", Menlo,
-    Consolas, monospace;
+  /* Typography — system stack (no external font dependency). */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
 
-  /* Type scale */
-  --text-2xs: 0.6875rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.875rem;
-  --text-md: 0.9375rem;
-  --text-lg: 1.0625rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
+  /* Type scale (semantic sizes) */
+  --text-2xs: 0.6875rem; /* 11px — compact metadata */
+  --text-xs: 0.75rem; /* 12px — metadata */
+  --text-sm: 0.8125rem; /* 13px — secondary / navigation */
+  --text-base: 0.875rem; /* 14px — body */
+  --text-md: 0.9375rem; /* 15px — emphasized body */
+  --text-lg: 1.0625rem; /* 17px — section headings */
+  --text-xl: 1.25rem; /* 20px — subsection headings */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.75rem; /* 28px — page title */
+  --text-4xl: 2.25rem; /* 36px — hero only */
 
   --leading-tight: 1.25;
   --leading-normal: 1.5;
@@ -40,97 +45,116 @@
   --sp-12: 48px;
   --sp-16: 64px;
 
-  /* Radius */
+  /* Radius — small, deliberate scale */
   --radius-sm: 4px;
   --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius-lg: 9px;
+  --radius-xl: 13px;
   --radius-full: 999px;
 
   /* Layout */
-  --sidebar-width: 248px;
-  --content-max: 760px;
-  --header-height: 52px;
-  --input-height: 34px;
+  --sidebar-width: 240px;
+  --content-max: 720px;
+  --content-wide: 1080px;
+  --header-height: 48px;
+  --input-height: 32px;
   --control-height: 32px;
 
   /* Transitions */
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --dur-fast: 120ms;
-  --dur-normal: 180ms;
-  --dur-slow: 260ms;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 100ms;
+  --dur-normal: 160ms;
+  --dur-slow: 240ms;
 
   /* Brand purple (shared) */
   --purple: #7c2bb4;
-  --purple-highlight: #a66bff;
+  --purple-hover: #8f3cc6;
   --purple-deep: #5e1f8a;
+  --purple-highlight: #a66bff;
 }
 
-/* Dark theme (default) */
+/* ------------------------------------------------------------------------- */
+/* Dark appearance (default) — deep, warm, never pure black                   */
+/* ------------------------------------------------------------------------- */
 :root,
 [data-theme="dark"] {
-  --bg: #08080c;
-  --bg-sidebar: #0c0b11;
-  --surface: #101016;
-  --surface-raised: #17151d;
-  --surface-hover: #1b1922;
-  --surface-active: #201d29;
-  --text-primary: #f5f3fa;
+  color-scheme: dark;
+
+  --bg: #0b0a0f;
+  --bg-sidebar: #0d0c12;
+  --surface: #131218;
+  --surface-2: #17151d;
+  --surface-raised: #1b1923;
+  --surface-hover: #201d2a;
+  --surface-active: #262231;
+
+  --text-primary: #f2f0f7;
   --text-secondary: #a7a2b3;
-  --text-muted: #777181;
-  --border: #292530;
-  --border-strong: #38343f;
+  --text-muted: #7d7788;
+
+  --border: #23202b;
+  --border-strong: #322d3d;
 
   --accent: var(--purple);
-  --accent-hover: var(--purple-highlight);
-  --accent-text: #d8c4f0;
-  --accent-soft: rgba(124, 43, 180, 0.16);
+  --accent-hover: var(--purple-hover);
+  --accent-text: #d3b5f0;
+  --accent-soft: rgba(124, 43, 180, 0.18);
+  --on-accent: #ffffff;
 
   --success: #3bb97b;
-  --success-soft: rgba(59, 185, 123, 0.14);
-  --warning: #d99b2b;
-  --warning-soft: rgba(217, 155, 43, 0.14);
+  --success-soft: rgba(59, 185, 123, 0.15);
+  --warning: #d9a02b;
+  --warning-soft: rgba(217, 160, 43, 0.15);
   --error: #e5534b;
-  --error-soft: rgba(229, 83, 75, 0.14);
+  --error-soft: rgba(229, 83, 75, 0.15);
   --info: #4c8dff;
-  --info-soft: rgba(76, 141, 255, 0.14);
+  --info-soft: rgba(76, 141, 255, 0.15);
 
-  --selection: rgba(166, 107, 255, 0.28);
+  --selection: rgba(166, 107, 255, 0.32);
   --focus-ring: var(--purple-highlight);
   --presence-online: #3bb97b;
-  --presence-away: #d99b2b;
+  --presence-away: #d9a02b;
   --presence-offline: #56515f;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
-/* Light theme */
+/* ------------------------------------------------------------------------- */
+/* Light appearance                                                           */
+/* ------------------------------------------------------------------------- */
 [data-theme="light"] {
+  color-scheme: light;
+
   --bg: #f7f6fa;
-  --bg-sidebar: #f0eef5;
+  --bg-sidebar: #f2f0f6;
   --surface: #ffffff;
-  --surface-raised: #f9f7fc;
-  --surface-hover: #f2f0f6;
-  --surface-active: #ebe7f2;
+  --surface-2: #f7f5fa;
+  --surface-raised: #ffffff;
+  --surface-hover: #f1eef6;
+  --surface-active: #eae6f2;
+
   --text-primary: #211d29;
-  --text-secondary: #686173;
+  --text-secondary: #625d6d;
   --text-muted: #8b8497;
-  --border: #e5e0eb;
-  --border-strong: #d6d0de;
+
+  --border: #e6e1ec;
+  --border-strong: #d7d1e0;
 
   --accent: var(--purple);
   --accent-hover: var(--purple-deep);
   --accent-text: #5e1f8a;
-  --accent-soft: rgba(124, 43, 180, 0.10);
+  --accent-soft: rgba(124, 43, 180, 0.09);
+  --on-accent: #ffffff;
 
   --success: #1f8a55;
   --success-soft: rgba(31, 138, 85, 0.12);
   --warning: #a56b0e;
   --warning-soft: rgba(165, 107, 14, 0.12);
-  --error: #c92a2a;
-  --error-soft: rgba(201, 42, 42, 0.10);
+  --error: #c6362e;
+  --error-soft: rgba(198, 54, 46, 0.10);
   --info: #2f6bdc;
   --info-soft: rgba(47, 107, 220, 0.12);
 
@@ -141,6 +165,6 @@
   --presence-offline: #a49eac;
 
   --shadow-sm: 0 1px 2px rgba(33, 29, 41, 0.06);
-  --shadow-md: 0 4px 12px rgba(33, 29, 41, 0.08);
-  --shadow-lg: 0 12px 32px rgba(33, 29, 41, 0.14);
+  --shadow-md: 0 6px 20px rgba(33, 29, 41, 0.10);
+  --shadow-lg: 0 16px 40px rgba(33, 29, 41, 0.16);
 }

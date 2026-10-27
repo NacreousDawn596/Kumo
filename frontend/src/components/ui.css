@@ -169,11 +169,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   margin-bottom: var(--sp-2);
 }
 .empty-state-title {
@@ -184,7 +185,8 @@
 .empty-state-desc {
   font-size: var(--text-sm);
   color: var(--text-muted);
-  max-width: 320px;
+  max-width: 340px;
+  line-height: var(--leading-normal);
 }
 .empty-state-action {
   margin-top: var(--sp-3);

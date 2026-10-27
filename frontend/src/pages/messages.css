@@ -88,7 +88,7 @@
   display: flex;
   align-items: flex-end;
   gap: var(--sp-2);
-  max-width: 70%;
+  max-width: 72%;
 }
 .msg-own {
   align-self: flex-end;
@@ -98,15 +98,15 @@
   background: var(--surface-raised);
   border: 1px solid var(--border);
   padding: 8px 12px;
-  border-radius: var(--radius-lg);
-  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
   line-height: var(--leading-normal);
   word-break: break-word;
 }
 .msg-own .msg-bubble {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--text-primary);
 }
 .msg-time {
   font-size: var(--text-2xs);
