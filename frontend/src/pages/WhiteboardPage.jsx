@@ -57,7 +57,8 @@ export default function WhiteboardPage() {
   }, [wb, whiteboardId]);
 
   const toWorld = (clientX, clientY) => {
-    const rect = svgRef.current.getBoundingClientRect();
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return { x: clientX, y: clientY };
     return {
       x: (clientX - rect.left - transform.x) / transform.k,
       y: (clientY - rect.top - transform.y) / transform.k,
@@ -212,9 +213,10 @@ export default function WhiteboardPage() {
 
   const onPointerMove = (e) => {
     if (dragRef.current) {
-      const dx = e.clientX - dragRef.current.startX;
-      const dy = e.clientY - dragRef.current.startY;
-      setTransform((t) => ({ ...t, x: dragRef.current.x + dx, y: dragRef.current.y + dy }));
+      const drag = dragRef.current;
+      const nx = drag.x + (e.clientX - drag.startX);
+      const ny = drag.y + (e.clientY - drag.startY);
+      setTransform((t) => ({ ...t, x: nx, y: ny }));
       return;
     }
     if (!drawing) return;

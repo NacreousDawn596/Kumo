@@ -92,7 +92,8 @@ export default function DocumentPage() {
   }, [file, fileId, pageNum]);
 
   const toNormalized = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
     return {
       x: (e.clientX - rect.left) / rect.width,
       y: (e.clientY - rect.top) / rect.height,
