@@ -66,6 +66,7 @@ cd frontend && npm run build
 
 - `docs/API.md` — endpoint reference.
 - `docs/SECURITY.md` — threat model and hardening.
+- `docs/CONCURRENCY.md` — ~100 concurrent users, conflict handling, scale-out path.
 - `docs/DEPLOYMENT_NIXOS.md` — NixOS deployment.
 - `docs/BACKUP_RECOVERY.md` — backup/restore.
 - `docs/IMPLEMENTATION_STATUS.md` — honest status of what works vs. what's
