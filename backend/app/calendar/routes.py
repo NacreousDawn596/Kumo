@@ -148,14 +148,11 @@ def create_event(body: EventIn, user: User = Depends(get_current_user), db: Sess
     return _out(event, "accepted")
 
 
-def _dt_fmt(dt: datetime) -> str:
-    if dt.tzinfo is None:
-        return dt.strftime("%Y%m%dT%H%M%S")
-    return dt.astimezone().strftime("%Y%m%dT%H%M%SZ")
-
-
 @router.get("/export.ics")
 def export_ics(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.caldav.ical import export_collection_ics
+    from app.models import CalendarEventOverride
+
     events = db.execute(
         select(CalendarEvent).where(
             CalendarEvent.cancelled.is_(False),
@@ -166,47 +163,17 @@ def export_ics(user: User = Depends(get_current_user), db: Session = Depends(get
         )
     ).scalars().all()
 
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Kumo//Kumo Calendar//EN"]
+    rows = []
     for e in events:
-        lines += [
-            "BEGIN:VEVENT",
-            f"UID:{e.id}@kumo",
-            f"DTSTAMP:{_dt_fmt(e.created_at)}",
-            f"DTSTART:{_dt_fmt(e.start_at)}",
-        ]
-        if e.end_at:
-            lines.append(f"DTEND:{_dt_fmt(e.end_at)}")
-        lines.append(f"SUMMARY:{e.title}")
-        if e.description:
-            desc = e.description.replace("\\", "\\\\").replace("\n", "\\n").replace(",", "\\,")
-            lines.append(f"DESCRIPTION:{desc}")
-        if e.location:
-            lines.append(f"LOCATION:{e.location}")
-        if e.recurrence:
-            lines.append(f"RRULE:{e.recurrence}")
-        lines.append("END:VEVENT")
-    lines.append("END:VCALENDAR")
-    ics = "\r\n".join(lines) + "\r\n"
+        overrides = db.execute(
+            select(CalendarEventOverride)
+            .where(CalendarEventOverride.event_id == e.id)
+            .order_by(CalendarEventOverride.recurrence_id)
+        ).scalars().all()
+        rows.append((e, overrides))
+
+    ics = export_collection_ics(rows)
     return Response(content=ics, media_type="text/calendar", headers={"Content-Disposition": 'attachment; filename="kumo.ics"'})
-
-
-def _parse_ics_datetime(value: str) -> datetime | None:
-    from datetime import timezone as _tz
-
-    value = value.strip()
-    if len(value) >= 8 and value[8:9] == "T":
-        try:
-            dt = datetime.strptime(value[:15], "%Y%m%dT%H%M%S")
-        except ValueError:
-            return None
-        if value.endswith("Z"):
-            return dt.replace(tzinfo=_tz.utc)
-        return dt
-    # All-day date: YYYYMMDD
-    try:
-        return datetime.strptime(value[:8], "%Y%m%d")
-    except ValueError:
-        return None
 
 
 class ImportBody(BaseModel):
@@ -215,34 +182,70 @@ class ImportBody(BaseModel):
 
 @router.post("/import")
 def import_ics(body: ImportBody, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    blocks = [b for b in body.content.split("BEGIN:VEVENT")[1:]]
-    if not blocks:
+    import vobject
+
+    from app.caldav.ical import dump_datetimes, fields_from_vevent
+    from app.models import CalendarEventOverride
+
+    vevents = []
+    try:
+        for cal in vobject.readComponents(body.content):
+            for comp in cal.components():
+                if comp.name == "VEVENT":
+                    vevents.append(comp)
+    except Exception as exc:  # noqa: BLE001 — report a clean error
+        raise HTTPException(status_code=400, detail=f"Invalid ICS: {exc}") from exc
+
+    if not vevents:
         raise HTTPException(status_code=400, detail="No VEVENT blocks found")
+
     created = 0
-    for block in blocks:
-        block = block.split("END:VEVENT", 1)[0]
-        props: dict[str, str] = {}
-        for line in block.splitlines():
-            if ":" not in line:
-                continue
-            name, _, value = line.partition(":")
-            props[name.split(";")[0].strip().upper()] = value.strip()
-        start = _parse_ics_datetime(props.get("DTSTART", ""))
-        if start is None:
+    master_by_uid: dict[str, CalendarEvent] = {}
+    pending_overrides: list[tuple[str, dict]] = []
+
+    for ve in vevents:
+        fields = fields_from_vevent(ve)
+        uid = str(ve.uid.value) if hasattr(ve, "uid") else None
+
+        if fields["recurrence_id"] is not None:
+            if uid:
+                pending_overrides.append((uid, fields))
             continue
-        end = _parse_ics_datetime(props.get("DTEND", "")) if props.get("DTEND") else None
+
         event = CalendarEvent(
-            title=props.get("SUMMARY") or "Imported event",
-            description=props.get("DESCRIPTION"),
-            start_at=start,
-            end_at=end,
-            all_day=bool(props.get("DTSTART") and len(props["DTSTART"]) == 8),
-            location=props.get("LOCATION"),
+            title=fields["title"],
+            description=fields["description"],
+            start_at=fields["start_at"],
+            end_at=fields["end_at"],
+            all_day=fields["all_day"],
+            location=fields["location"],
+            timezone=fields["timezone"],
             organizer_id=user.id,
-            recurrence=props.get("RRULE"),
+            recurrence=fields["recurrence"],
+            exdates=dump_datetimes(fields["exdates"]),
+            rdates=dump_datetimes(fields["rdates"]),
         )
+        if uid:
+            event.uid = uid
         db.add(event)
+        db.flush()
+        if uid:
+            master_by_uid[uid] = event
         created += 1
+
+    for uid, fields in pending_overrides:
+        master = master_by_uid.get(uid)
+        if master is None:
+            continue
+        db.add(CalendarEventOverride(
+            event_id=master.id,
+            recurrence_id=fields["recurrence_id"],
+            start_at=fields["start_at"],
+            end_at=fields["end_at"],
+            title=fields["title"],
+            cancelled=fields["cancelled"],
+        ))
+
     db.commit()
     return {"imported": created}
 

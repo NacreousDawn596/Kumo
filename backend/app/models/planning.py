@@ -90,10 +90,33 @@ class CalendarEvent(IdMixin, TimestampMixin, Base):
     # the client's UID (so it round-trips). Null for app-created events, whose
     # CalDAV UID is derived as ``{id}@kumo``.
     uid: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    # Recurrence exceptions: JSON arrays of ISO-8601 UTC datetimes.
+    exdates: Mapped[str | None] = mapped_column(Text, nullable=True)  # excluded occurrences
+    rdates: Mapped[str | None] = mapped_column(Text, nullable=True)   # extra occurrences
 
     participants: Mapped[list["EventParticipant"]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
     )
+    overrides: Mapped[list["CalendarEventOverride"]] = relationship(
+        back_populates="event", cascade="all, delete-orphan"
+    )
+
+
+class CalendarEventOverride(IdMixin, TimestampMixin, Base):
+    """A per-instance override of a recurring event (RECURRENCE-ID)."""
+
+    __tablename__ = "calendar_event_overrides"
+
+    event_id: Mapped[str] = mapped_column(
+        ForeignKey("calendar_events.id", ondelete="CASCADE"), index=True
+    )
+    recurrence_id: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cancelled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    event: Mapped["CalendarEvent"] = relationship(back_populates="overrides")
 
 
 class EventParticipant(Base):

@@ -20,6 +20,8 @@ dependencies = [
     "pywebpush>=2.0",
     "rdkit>=2026.9.1",
     "radicale>=3.9.0",
+    "icalendar>=7.3.0",
+    "tzdata>=2026.5",
 ]
 
 [project.optional-dependencies]

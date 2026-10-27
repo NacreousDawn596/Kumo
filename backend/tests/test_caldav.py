@@ -319,3 +319,228 @@ def test_caldav_password_endpoint_returns_plaintext(client):
     rr = dav.request("/caluser/", method="PROPFIND", headers={"Depth": "0"}, status="*")
     assert rr.status_int == 207
 
+
+# --- Time zones --------------------------------------------------------------------
+
+def _put(alice, href: str, body: str):
+    return alice.request(
+        href, method="PUT", body=body.encode(), headers={"Content-Type": "text/calendar"}, status="*"
+    )
+
+
+def test_timezone_roundtrip_dst(alice):
+    # Summer (EDT, UTC-4): 9:00 AM local == 13:00 UTC.
+    ics = (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n"
+        "UID:tz-1@test\r\nDTSTART;TZID=America/New_York:20260701T090000\r\n"
+        "DTEND;TZID=America/New_York:20260701T100000\r\nSUMMARY:Summer\r\n"
+        "END:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+    r = _put(alice, f"{CALENDAR}/tz-1@test.ics", ics)
+    assert r.status_int in (200, 201, 204)
+
+    with SessionLocal() as db:
+        ev = db.execute(select(CalendarEvent).where(CalendarEvent.uid == "tz-1@test")).scalar_one()
+    assert ev.timezone == "America/New_York"
+    assert ev.start_at.hour == 13  # stored naive-UTC: 9 AM EDT == 13 UTC
+
+    # The stored event re-exports with TZID + a VTIMEZONE, preserving 9 AM local.
+    r = alice.request(f"{CALENDAR}/tz-1@test.ics", method="GET", status="*")
+    assert "TZID=America/New_York:20260701T090000" in r.text
+    assert "BEGIN:VTIMEZONE" in r.text
+    assert "TZID:America/New_York" in r.text
+
+    # Winter (EST, UTC-5): 9:00 AM local == 14:00 UTC.
+    ics2 = (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n"
+        "UID:tz-2@test\r\nDTSTART;TZID=America/New_York:20260115T090000\r\n"
+        "SUMMARY:Winter\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+    _put(alice, f"{CALENDAR}/tz-2@test.ics", ics2)
+    with SessionLocal() as db:
+        ev2 = db.execute(select(CalendarEvent).where(CalendarEvent.uid == "tz-2@test")).scalar_one()
+    assert ev2.start_at.hour == 14  # 9 AM EST == 14 UTC
+    r = alice.request(f"{CALENDAR}/tz-2@test.ics", method="GET", status="*")
+    assert "TZID=America/New_York:20260115T090000" in r.text
+
+
+# --- Recurrence exceptions ---------------------------------------------------------
+
+def _recurring_master() -> str:
+    return (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n"
+        "UID:rec-1@test\r\nDTSTART:20261102T090000Z\r\n"
+        "RRULE:FREQ=WEEKLY\r\nEXDATE:20261109T090000Z\r\n"
+        "SUMMARY:Weekly\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+
+
+def test_recurrence_exceptions_roundtrip(alice):
+    from app.models import CalendarEventOverride
+
+    r = _put(alice, f"{CALENDAR}/rec-1@test.ics", _recurring_master())
+    assert r.status_int in (200, 201, 204)
+
+    # Moved occurrence.
+    moved = (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n"
+        "UID:rec-1@test\r\nRECURRENCE-ID:20261116T090000Z\r\n"
+        "DTSTART:20261117T100000Z\r\nDTEND:20261117T110000Z\r\n"
+        "SUMMARY:Weekly (moved)\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+    _put(alice, f"{CALENDAR}/rec-1@test-20261116T090000Z.ics", moved)
+
+    # Cancelled occurrence.
+    cancelled = (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n"
+        "UID:rec-1@test\r\nRECURRENCE-ID:20261123T090000Z\r\n"
+        "DTSTART:20261123T090000Z\r\nSTATUS:CANCELLED\r\n"
+        "END:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+    _put(alice, f"{CALENDAR}/rec-1@test-20261123T090000Z.ics", cancelled)
+
+    with SessionLocal() as db:
+        master = db.execute(select(CalendarEvent).where(CalendarEvent.uid == "rec-1@test")).scalar_one()
+        assert master.recurrence == "FREQ=WEEKLY"
+        assert len(master.exdates or "") > 0
+        overrides = db.execute(
+            select(CalendarEventOverride).where(CalendarEventOverride.event_id == master.id)
+        ).scalars().all()
+        assert len(overrides) == 2
+        by_rid = {o.recurrence_id.replace(tzinfo=None).isoformat(): o for o in overrides}
+
+    assert "2026-11-16T09:00:00" in by_rid
+    assert "2026-11-23T09:00:00" in by_rid
+    moved_ov = by_rid["2026-11-16T09:00:00"]
+    assert moved_ov.cancelled is False
+    assert moved_ov.start_at.hour == 10  # moved to 10:00 UTC
+    cancelled_ov = by_rid["2026-11-23T09:00:00"]
+    assert cancelled_ov.cancelled is True
+
+    # Round-trip via CalDAV GET.
+    r = alice.request(f"{CALENDAR}/rec-1@test.ics", method="GET", status="*")
+    assert "RRULE:FREQ=WEEKLY" in r.text
+    assert "EXDATE:20261109T090000Z" in r.text
+
+    r = alice.request(f"{CALENDAR}/rec-1@test-20261116T090000Z.ics", method="GET", status="*")
+    assert "RECURRENCE-ID:20261116T090000Z" in r.text
+    assert "SUMMARY:Weekly (moved)" in r.text
+
+    r = alice.request(f"{CALENDAR}/rec-1@test-20261123T090000Z.ics", method="GET", status="*")
+    assert "STATUS:CANCELLED" in r.text
+
+    # PROPFIND lists three items (master + 2 overrides); "@" is percent-encoded.
+    r = alice.request(f"{CALENDAR}/", method="PROPFIND", headers={"Depth": "1"}, status="*")
+    assert "rec-1%40test.ics" in r.text
+    assert "rec-1%40test-20261116T090000Z" in r.text
+    assert "rec-1%40test-20261123T090000Z" in r.text
+
+
+def test_recurrence_override_delete(alice):
+    from app.models import CalendarEventOverride
+
+    _put(alice, f"{CALENDAR}/rec-2@test.ics", _recurring_master().replace("rec-1", "rec-2"))
+    _put(
+        alice,
+        f"{CALENDAR}/rec-2@test-20261116T090000Z.ics",
+        (
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n"
+            "UID:rec-2@test\r\nRECURRENCE-ID:20261116T090000Z\r\n"
+            "DTSTART:20261117T100000Z\r\nSUMMARY:Moved\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        ),
+    )
+    # Delete just the override.
+    r = alice.request(f"{CALENDAR}/rec-2@test-20261116T090000Z.ics", method="DELETE", status="*")
+    assert r.status_int == 200
+
+    with SessionLocal() as db:
+        master = db.execute(select(CalendarEvent).where(CalendarEvent.uid == "rec-2@test")).scalar_one()
+        overrides = db.execute(
+            select(CalendarEventOverride).where(CalendarEventOverride.event_id == master.id)
+        ).scalars().all()
+    assert overrides == []  # override removed, master still present
+
+
+# --- Calendar properties -----------------------------------------------------------
+
+def test_calendar_properties_persist(alice):
+    proppatch = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        '<D:propertyupdate xmlns:D="DAV:" xmlns:I="http://apple.com/ns/ical/">'
+        "<D:set><D:prop>"
+        "<D:displayname>My Personal Calendar</D:displayname>"
+        "<I:calendar-color>#FF0000FF</I:calendar-color>"
+        "</D:prop></D:set>"
+        "</D:propertyupdate>"
+    )
+    r = alice.request(f"{CALENDAR}/", method="PROPPATCH", body=proppatch.encode(), headers={"Content-Type": "application/xml"}, status="*")
+    assert r.status_int == 207
+
+    # PROPFIND returns the persisted values.
+    r = alice.request(
+        f"{CALENDAR}/",
+        method="PROPFIND",
+        headers={"Depth": "0"},
+        body=(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<D:propfind xmlns:D="DAV:" xmlns:I="http://apple.com/ns/ical/">'
+            "<D:prop><D:displayname/><I:calendar-color/></D:prop>"
+            "</D:propfind>"
+        ).encode(),
+        status="*",
+    )
+    assert r.status_int == 207
+    assert "My Personal Calendar" in r.text
+    assert "#FF0000FF" in r.text
+
+
+def test_rest_export_preserves_exceptions(client):
+    from datetime import timezone
+
+    from app.models import CalendarEventOverride
+
+    client.post(
+        "/api/auth/register",
+        json={"email": "exp@example.com", "username": "expuser", "display_name": "Exp", "password": PASSWORD},
+    )
+    with SessionLocal() as db:
+        u = db.execute(select(User).where(User.username == "expuser")).scalar_one()
+        ev = CalendarEvent(
+            organizer_id=u.id, title="Recurring", recurrence="FREQ=WEEKLY",
+            start_at=datetime(2026, 11, 2, 9, 0, tzinfo=timezone.utc),
+            exdates='["2026-11-09T09:00:00+00:00"]',
+        )
+        db.add(ev)
+        db.flush()
+        db.add(CalendarEventOverride(
+            event_id=ev.id,
+            recurrence_id=datetime(2026, 11, 16, 9, 0, tzinfo=timezone.utc),
+            start_at=datetime(2026, 11, 17, 10, 0, tzinfo=timezone.utc),
+            title="Moved instance",
+        ))
+        db.commit()
+
+    r = client.get("/api/calendar/export.ics")
+    assert r.status_code == 200
+    assert "RRULE:FREQ=WEEKLY" in r.text
+    assert "EXDATE:20261109T090000Z" in r.text
+    assert "RECURRENCE-ID:20261116T090000Z" in r.text
+    assert "SUMMARY:Moved instance" in r.text
+
+    # Re-import into a fresh user and verify the recurrence + override survive.
+    client.post("/api/auth/register", json={"email": "imp@example.com", "username": "impuser", "display_name": "Imp", "password": PASSWORD})
+    r2 = client.post("/api/calendar/import", json={"content": r.text})
+    assert r2.status_code == 200
+    assert r2.json()["imported"] == 1
+
+    with SessionLocal() as db:
+        u2 = db.execute(select(User).where(User.username == "impuser")).scalar_one()
+        imported = db.execute(select(CalendarEvent).where(CalendarEvent.organizer_id == u2.id)).scalar_one()
+        assert imported.recurrence == "FREQ=WEEKLY"
+        assert "2026-11-09T09:00:00" in (imported.exdates or "")
+        ovs = db.execute(select(CalendarEventOverride).where(CalendarEventOverride.event_id == imported.id)).scalars().all()
+        assert len(ovs) == 1
+        assert ovs[0].title == "Moved instance"
+
+
+

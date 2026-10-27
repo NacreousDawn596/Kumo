@@ -37,6 +37,7 @@ from app.models.knowledge import (
 )
 from app.models.planning import (
     CalendarEvent,
+    CalendarEventOverride,
     EventParticipant,
     Project,
     ProjectMember,
@@ -101,6 +102,7 @@ __all__ = [
     "Project",
     "ProjectMember",
     "CalendarEvent",
+    "CalendarEventOverride",
     "EventParticipant",
     "Reminder",
     "StudySession",

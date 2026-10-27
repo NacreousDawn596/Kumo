@@ -220,6 +220,15 @@ interface is designed so an S3-compatible backend can replace local files later.
 - **Create, update, delete, and read** from CalDAV clients are reflected in the
   app (and vice versa) on the next read, including **recurring (RRULE)**, and
   **all-day** events.
+- **Time zones** — non-UTC `TZID`s are preserved and re-emitted with a full
+  `VTIMEZONE` definition (daylight-saving rules included), so events round-trip
+  across DST without shifting their intended local time.
+- **Recurrence exceptions** — `RDATE`, `EXDATE`, and per-instance overrides via
+  `RECURRENCE-ID` (moved and cancelled occurrences) are fully preserved across
+  sync, edits, and re-exports.
+- **Calendar properties** — the per-user display name and color set via WebDAV
+  `PROPPATCH` are persisted and returned by `PROPFIND` (no longer a hardcoded
+  name).
 - **UIDs** — client-supplied UIDs round-trip; app-created events use the derived
   `{id}@kumo` UID.
 - **Conflict handling** — per-item ETags support optimistic concurrency
@@ -488,14 +497,15 @@ ISO-8601.
 
 ## 17. Testing
 
-- **Backend** — 39 pytest tests covering authentication, session rotation,
+- **Backend** — 47 pytest tests covering authentication, session rotation,
   authorization boundaries (IDOR, cross-group leakage, removed-member access),
   storage quota/transfer/unlink, public-file share/revoke, group invite-link
   approval, people search, SchoolApp assertion verification, chemistry
   sketcher, ICS import, avatar upload, **CalDAV** (create/read/update/delete,
-  app↔CalDAV round-trip, If-Match conflict, deletion, authentication, and
-  per-user isolation via the real Radicale WSGI app), and a **100-user
-  concurrency stress test** (messages + whiteboard).
+  app↔CalDAV round-trip, If-Match conflict, deletion, authentication, per-user
+  isolation, **time-zone/DST round-trip, recurrence exceptions, calendar
+  properties**, and ICS export/import preservation via the real Radicale WSGI
+  app), and a **100-user concurrency stress test** (messages + whiteboard).
 - **Frontend** — production build (`npm run build`) verified; end-to-end flows
   exercised in a real headless browser (SchoolApp sign-in, note autosave,
   calendar, whiteboard draw/undo/redo, PDF annotate, chemistry 3D viewer).
@@ -506,13 +516,6 @@ ISO-8601.
 
 Stated precisely so reviewers are not misled:
 
-- **CalDAV time-zone expansion** — events are stored/synced in UTC; `TZID`
-  round-trips as a display hint but a full `VTIMEZONE` definition is not
-  emitted (clients convert to their local time zone).
-- **RDATE/EXDATE recurrence exceptions** — RRULE recurs, but per-instance
-  exceptions (moved/cancelled occurrences) are not preserved.
 - **Message attachments** (files/images) — not present; only link previews are
   supported.
 - **No call recording** in 1:1 or group calls.
-- **Calendar color / display-name** `PROPPATCH` — accepted but not persisted
-  (the calendar name is fixed to "Kumo Calendar").
