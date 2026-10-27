@@ -157,7 +157,20 @@ links (pan/zoom, click-to-open), plus a global search.
 
 ---
 
-## 11. Settings & personalization
+## 11. Chemistry
+
+- **SMILES input** with a gallery of example molecules (ethanol, benzene,
+  caffeine, glucose, …).
+- **Chemical verification** via RDKit — invalid SMILES are rejected; the
+  formula, molecular weight, and formal charges are computed and shown.
+- **3D structure viewer** (Three.js) — atoms colored with **CPK colors**,
+  single/double/triple bonds, drag-to-rotate, scroll-to-zoom, and a **spin**
+  toggle.
+- A chemistry drawing tool in the whiteboard (place atoms, draw bonds).
+
+---
+
+## 12. Settings & personalization
 
 - **Appearance** — light / dark / system theme; **8 accent colors**
   (purple, blue, indigo, teal, green, orange, rose, cyan), each rendered in
@@ -168,8 +181,7 @@ links (pan/zoom, click-to-open), plus a global search.
 
 ---
 
-## 12. Platform & operations
-
+## 13. Platform & operations
 - **Stack** — React (Vite) frontend; FastAPI + SQLAlchemy 2.x + Alembic
   backend; PostgreSQL in production (SQLite fallback for local dev/tests).
 - **Docker Compose** — PostgreSQL + backend + nginx serving the whole app on a
@@ -182,7 +194,7 @@ links (pan/zoom, click-to-open), plus a global search.
 
 ---
 
-## 13. Security (summary)
+## 14. Security (summary)
 
 - Server-enforced authorization on every protected route (deny-by-default);
   `404` for resources the caller must not know exist.
@@ -205,5 +217,7 @@ Stated plainly so reviewers aren't misled:
 - **CalDAV (two-way sync)** — only ICS *export* is implemented; there is no
   CalDAV server or import.
 - **Database board/gallery views** — only the table view is implemented.
-- **Chemical-structure *validation*** — the chemistry tool draws atoms and
-  bonds; it does not check or validate chemistry.
+- **Chemical-structure *sketching*** — the chemistry tool draws atoms and
+  bonds and verifies SMILES via RDKit, but there is no 2D sketcher with
+  drag-to-place bonds in the 3D viewer (the whiteboard has a basic atom/bond
+  tool).
