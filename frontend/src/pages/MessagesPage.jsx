@@ -6,6 +6,7 @@ import { MessageSquare, Send } from "lucide-react";
 import { api, apiPost } from "../api/client.js";
 import { useAuth } from "../store/auth.js";
 import { Avatar, EmptyState } from "../components/ui.jsx";
+import CallBar from "../components/CallBar.jsx";
 import { connectRealtime, onEvent, subscribeRoom } from "../lib/realtime.js";
 import "../styles/pages.css";
 import "./messages.css";
@@ -81,7 +82,12 @@ export default function MessagesPage() {
           <EmptyState icon={MessageSquare} title="Select a conversation" description="Choose a conversation to start messaging." />
         ) : (
           <>
-            <div className="messages-thread-head">{current?.title || "Conversation"}</div>
+            <div className="messages-thread-head">
+              <span>{current?.title || "Conversation"}</span>
+              {conversationId && (
+                <CallBar conversationId={conversationId} otherName={current?.title} />
+              )}
+            </div>
             <div className="messages-scroll" ref={scrollRef}>
               {messages.map((m) => (
                 <div key={m.id} className={`msg ${m.sender_id === user.id ? "msg-own" : ""}`}>
