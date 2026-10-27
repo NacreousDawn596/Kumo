@@ -32,16 +32,17 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The frontend listens on port 80 (put an HTTPS reverse proxy — Caddy/nginx —
-in front, or change the port mapping). SQLite data persists in the `kumo-data`
-named volume.
+The whole app (frontend + API + WebSocket) is served on a single port, **5480**
+(`http://localhost:5480`). nginx serves the built frontend and proxies `/api/*`
+(including WebSocket) to the backend. Put an HTTPS reverse proxy (Caddy/nginx)
+in front for production. SQLite data persists in the `kumo-data` named volume.
 
 ## Persistent storage
 
-The `kumo-data` volume holds both `/data/kumo.db` (SQLite) and `/data/storage`
-(file contents). On NixOS, Docker named volumes live under `/var/lib/docker`;
-keep this on a suitable local filesystem (SQLite needs reliable local locking —
-do **not** put it on NFS or other network filesystems).
+The `kumo-data` volume holds both `/app/data/kumo.db` (SQLite) and
+`/app/data/storage` (file contents). On NixOS, Docker named volumes live under
+`/var/lib/docker`; keep this on a suitable local filesystem (SQLite needs
+reliable local locking — do **not** put it on NFS or other network filesystems).
 
 ## Database migrations
 

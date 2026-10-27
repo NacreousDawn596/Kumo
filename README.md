@@ -55,6 +55,9 @@ cp .env.example .env      # set SECRET_KEY, origins, COOKIE_SECURE=true
 docker compose up -d --build
 ```
 
+The whole app is served on **http://localhost:5480** (frontend + API + WebSocket
+behind one nginx reverse proxy).
+
 ## Tests
 
 ```sh
