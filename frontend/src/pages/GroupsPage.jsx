@@ -49,7 +49,7 @@ export default function GroupsPage() {
       ) : (
         <div className="card">
           {groups.map((g) => (
-            <div key={g.id} className="card-row">
+            <Link key={g.id} to={`/groups/${g.id}`} className="card-row">
               <div className="notif-main">
                 <div className="note-title">{g.name}</div>
                 {g.description && <div className="notif-body">{g.description}</div>}
@@ -57,10 +57,7 @@ export default function GroupsPage() {
                   {g.members.length} member{g.members.length === 1 ? "" : "s"} · you are {g.my_role}
                 </div>
               </div>
-              <Link to={`/messages`} className="btn btn-ghost btn-sm">
-                <MessageSquare size={14} /> Chat
-              </Link>
-            </div>
+            </Link>
           ))}
         </div>
       )}

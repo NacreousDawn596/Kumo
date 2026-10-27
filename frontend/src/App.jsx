@@ -8,6 +8,8 @@ import HomePage from "./pages/HomePage.jsx";
 import InboxPage from "./pages/InboxPage.jsx";
 import CalendarPage from "./pages/CalendarPage.jsx";
 import TasksPage from "./pages/TasksPage.jsx";
+import ProjectsPage from "./pages/ProjectsPage.jsx";
+import ProjectDetailPage from "./pages/ProjectDetailPage.jsx";
 import NotesPage from "./pages/NotesPage.jsx";
 import PageEditorPage from "./pages/PageEditorPage.jsx";
 import KnowledgePage from "./pages/KnowledgePage.jsx";
@@ -15,6 +17,7 @@ import VaultPage from "./pages/VaultPage.jsx";
 import SessionsPage from "./pages/SessionsPage.jsx";
 import StudyRoomPage from "./pages/StudyRoomPage.jsx";
 import GroupsPage from "./pages/GroupsPage.jsx";
+import GroupDetailPage from "./pages/GroupDetailPage.jsx";
 import SearchPage from "./pages/SearchPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import WhiteboardPage from "./pages/WhiteboardPage.jsx";
@@ -62,6 +65,8 @@ export default function App() {
         <Route path="messages/:conversationId" element={<MessagesPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="tasks" element={<TasksPage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="notes" element={<NotesPage />} />
         <Route path="pages/:pageId" element={<PageEditorPage />} />
         <Route path="knowledge" element={<KnowledgePage />} />
@@ -69,7 +74,7 @@ export default function App() {
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="sessions/:sessionId" element={<StudyRoomPage />} />
         <Route path="groups" element={<GroupsPage />} />
-        <Route path="groups/:groupId" element={<GroupsPage />} />
+        <Route path="groups/:groupId" element={<GroupDetailPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/:section" element={<SettingsPage />} />
