@@ -1,18 +1,20 @@
 import { useParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { NavLink } from "react-router-dom";
-import { LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { Bell, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useAuth } from "../store/auth.js";
 import { useTheme } from "../store/theme.js";
 import { apiPatch } from "../api/client.js";
 import { Button, Input, Textarea } from "../components/ui.jsx";
 import StorageMeter from "../components/StorageMeter.jsx";
+import { registerAndSubscribe, unsubscribe } from "../lib/push.js";
 import "../styles/pages.css";
 import "./settings.css";
 import { useState } from "react";
 
 const SECTIONS = [
   { id: "appearance", label: "Appearance" },
+  { id: "notifications", label: "Notifications" },
   { id: "profile", label: "Profile" },
   { id: "storage", label: "Storage" },
   { id: "account", label: "Account" },
@@ -36,6 +38,7 @@ export default function SettingsPage() {
       </div>
       <div className="settings-body">
         {section === "appearance" && <AppearanceSection />}
+        {section === "notifications" && <NotificationsSection />}
         {section === "profile" && <ProfileSection />}
         {section === "storage" && <StorageSection />}
         {section === "account" && <AccountSection />}
@@ -192,6 +195,44 @@ function AccountSection() {
           Sign out
         </Button>
       </div>
+    </div>
+  );
+}
+
+function NotificationsSection() {
+  const [pushOn, setPushOn] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      if (pushOn) {
+        await unsubscribe();
+        setPushOn(false);
+      } else {
+        const res = await registerAndSubscribe();
+        setPushOn(res.enabled);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <h1 className="page-title">Notifications</h1>
+      <div className="settings-row">
+        <div>
+          <div className="settings-label">Browser push notifications</div>
+          <div className="settings-value">Receive notifications when Kumo is closed.</div>
+        </div>
+        <button className={`share-toggle ${pushOn ? "share-toggle-on" : ""}`} onClick={toggle} disabled={busy} aria-label="Toggle push notifications">
+          <span className="share-toggle-knob" />
+        </button>
+      </div>
+      <p className="page-subtitle" style={{ marginTop: 12 }}>
+        Push notifications require the server's VAPID keys to be configured.
+      </p>
     </div>
   );
 }

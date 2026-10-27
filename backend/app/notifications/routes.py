@@ -3,14 +3,41 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models import Notification, User, utcnow
+from app.notifications import service
 from app.security.deps import get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+
+class PushSubIn(BaseModel):
+    endpoint: str
+    keys: dict
+
+
+@router.get("/vapid-public-key")
+def vapid_public_key():
+    return {"public_key": settings.vapid_public_key, "enabled": bool(settings.vapid_public_key)}
+
+
+@router.post("/push-subscribe", status_code=status.HTTP_201_CREATED)
+def push_subscribe(body: PushSubIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    service.store_subscription(db, user, body.endpoint, body.keys)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/push-unsubscribe", status_code=status.HTTP_204_NO_CONTENT)
+def push_unsubscribe(body: PushSubIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    service.remove_subscription(db, user, body.endpoint)
+    db.commit()
+    return None
 
 
 @router.get("")

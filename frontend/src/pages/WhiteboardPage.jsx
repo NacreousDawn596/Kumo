@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Eraser,
+  FlaskConical,
   Hand,
   MousePointer,
   Pen,
@@ -27,6 +28,7 @@ const TOOLS = [
   { id: "rect", label: "Rectangle (R)", icon: Square },
   { id: "arrow", label: "Arrow (A)", icon: ArrowRight },
   { id: "text", label: "Text (T)", icon: Type },
+  { id: "chem", label: "Chemistry (C)", icon: FlaskConical },
 ];
 
 export default function WhiteboardPage() {
@@ -148,7 +150,7 @@ export default function WhiteboardPage() {
         return;
       }
 
-      const keyMap = { v: "select", h: "hand", p: "pen", e: "erase", r: "rect", a: "arrow", t: "text" };
+      const keyMap = { v: "select", h: "hand", p: "pen", e: "erase", r: "rect", a: "arrow", t: "text", c: "chem" };
       const mapped = keyMap[e.key.toLowerCase()];
       if (mapped && !e.metaKey && !e.ctrlKey) setTool(mapped);
     };
@@ -171,11 +173,11 @@ export default function WhiteboardPage() {
         const w = Math.abs(el.w);
         const h = Math.abs(el.h);
         if (pt.x >= x - pad && pt.x <= x + w + pad && pt.y >= y - pad && pt.y <= y + h + pad) return el;
-      } else if (el.type === "arrow") {
+      } else if (el.type === "arrow" || el.type === "bond") {
         const x2 = el.x + el.w;
         const y2 = el.y + el.h;
         if (distToSegment(pt, el.x, el.y, x2, y2) < pad) return el;
-      } else if (el.type === "text") {
+      } else if (el.type === "text" || el.type === "atom") {
         if (Math.hypot(pt.x - el.x, pt.y - el.y) < 16 / transform.k) return el;
       }
     }
@@ -204,7 +206,7 @@ export default function WhiteboardPage() {
       setDrawing(el);
       return;
     }
-    if (tool === "rect" || tool === "arrow" || tool === "text") {
+    if (tool === "rect" || tool === "arrow" || tool === "text" || tool === "chem") {
       const el = { id: genId(), type: tool, x: pt.x, y: pt.y, w: 0, h: 0, stroke: STROKE };
       setDrawing(el);
       return;
@@ -238,6 +240,14 @@ export default function WhiteboardPage() {
       } else if (drawing.type === "text") {
         const text = window.prompt("Label:");
         if (text) commitElement({ ...drawing, text });
+      } else if (drawing.type === "chem") {
+        // A click places an atom; a drag draws a bond (line).
+        if (Math.abs(drawing.w) > 6 || Math.abs(drawing.h) > 6) {
+          commitElement({ ...drawing, type: "bond" });
+        } else {
+          const label = window.prompt("Element symbol (e.g. C, O, N):", "C");
+          if (label) commitElement({ ...drawing, type: "atom", label: label.trim() || "C" });
+        }
       }
       setDrawing(null);
     }
@@ -339,6 +349,19 @@ function ElementView({ el, selected }) {
       <g stroke={el.stroke} strokeWidth={2} fill="none" {...common}>
         <line x1={el.x} y1={el.y} x2={el.x + el.w} y2={el.y + el.h} />
         <path d={`M${el.x + el.w} ${el.y + el.h} l-8 -4 M${el.x + el.w} ${el.y + el.h} l-4 -8`} />
+      </g>
+    );
+  }
+  if (el.type === "bond") {
+    return <line x1={el.x} y1={el.y} x2={el.x + el.w} y2={el.y + el.h} stroke={el.stroke} strokeWidth={2} {...common} />;
+  }
+  if (el.type === "atom") {
+    return (
+      <g {...common}>
+        <circle cx={el.x} cy={el.y} r={13} fill="none" stroke={el.stroke} strokeWidth={1.5} />
+        <text x={el.x} y={el.y} textAnchor="middle" dominantBaseline="middle" fontSize={12} fill={el.stroke}>
+          {el.label}
+        </text>
       </g>
     );
   }

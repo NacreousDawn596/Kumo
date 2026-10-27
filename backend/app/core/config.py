@@ -53,6 +53,18 @@ class Settings(BaseSettings):
     default_storage_quota_bytes: int = 500 * 1024 * 1024  # 500 MB per user
     max_message_bytes: int = 64 * 1024
 
+    # Web Push (VAPID) — set keys to enable browser push notifications.
+    # Generate: `openssl ecparam -genkey -name prime256v1 -noout -out vapid_private.pem`
+    # and derive the public key; or use pywebpush's vapid helper.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@kumo.example.com"
+
+    # LiveKit (SFU for group audio). Leave empty to disable group calls.
+    livekit_url: str = ""
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
+
     # Cookies
     cookie_secure: bool = False
     cookie_samesite: str = "lax"

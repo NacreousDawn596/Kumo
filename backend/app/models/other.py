@@ -59,3 +59,11 @@ class AuditEvent(IdMixin, TimestampMixin, Base):
     resource_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     resource_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class PushSubscription(IdMixin, TimestampMixin, Base):
+    __tablename__ = "push_subscriptions"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(Text, nullable=False)
+    keys_json: Mapped[str] = mapped_column(Text, nullable=False)  # {p256dh, auth}

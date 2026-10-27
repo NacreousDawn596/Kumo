@@ -52,7 +52,7 @@ from app.models.collaboration import (
     Whiteboard,
     WhiteboardOperation,
 )
-from app.models.other import AuditEvent, Contact, Invitation, Notification
+from app.models.other import AuditEvent, Contact, Invitation, Notification, PushSubscription
 
 __all__ = [
     "Base",
@@ -113,4 +113,5 @@ __all__ = [
     "Contact",
     "Invitation",
     "AuditEvent",
+    "PushSubscription",
 ]
