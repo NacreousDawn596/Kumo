@@ -136,6 +136,8 @@ def serialize_file(db: Session, user: User, file: File) -> dict:
         "updated_at": file.updated_at,
         "permission": perm,
         "is_linked": file.owner_id != user.id and perm is not None,
+        "is_public": file.is_public,
+        "public_token": file.public_token,
     }
 
 
@@ -252,3 +254,26 @@ def unlink_file(db: Session, user: User, file: File) -> None:
         raise HTTPException(status_code=404, detail="No linked share to remove")
     db.delete(share)
     db.commit()
+
+
+def make_public(db: Session, file: File) -> str:
+    """Turn on public sharing and return the public token."""
+    file.is_public = True
+    if not file.public_token:
+        from app.models.base import new_id
+
+        file.public_token = new_id()
+    db.commit()
+    return file.public_token
+
+
+def make_private(db: Session, file: File) -> None:
+    file.is_public = False
+    db.commit()
+
+
+def get_public_file(db: Session, token: str) -> File | None:
+    file = db.execute(
+        select(File).where(File.public_token == token, File.is_public.is_(True))
+    ).scalar_one_or_none()
+    return file

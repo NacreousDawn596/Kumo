@@ -109,6 +109,20 @@ def unlink_file(file_id: str, user: User = Depends(get_current_user), db: Sessio
     return None
 
 
+@router.post("/files/{file_id}/make-public")
+def make_public(file_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    record = service.require_file(db, user, file_id, "manage")
+    token = service.make_public(db, record)
+    return {"public": True, "token": token, "url": f"/public/files/{token}"}
+
+
+@router.post("/files/{file_id}/make-private")
+def make_private(file_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    record = service.require_file(db, user, file_id, "manage")
+    service.make_private(db, record)
+    return {"public": False}
+
+
 @router.post("/files/{file_id}/shares", status_code=status.HTTP_201_CREATED)
 def share_file(file_id: str, body: ShareIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     record = service.require_file(db, user, file_id, "manage")

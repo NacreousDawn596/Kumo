@@ -89,3 +89,8 @@ app.include_router(calls_router, prefix="/api")
 from app.realtime.routes import router as realtime_router  # noqa: E402
 
 app.include_router(realtime_router, prefix="/api")
+
+# Public file sharing (no auth) — under /api so nginx proxies it, but read-only.
+from app.vault.public import router as public_router  # noqa: E402
+
+app.include_router(public_router, prefix="/api")

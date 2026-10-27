@@ -17,6 +17,7 @@ from app.models import (
     User,
     utcnow,
 )
+from app.models.base import new_id
 from app.security.authz import group_role, is_group_member
 from app.security.deps import get_current_user
 
@@ -183,6 +184,79 @@ def accept_invitation(invitation_id: str, user: User = Depends(get_current_user)
     invite.status = "accepted"
     db.commit()
     return _out(db, group, user)
+
+
+@router.post("/{group_id}/invite-link")
+def invite_link(group_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    group = _require_role(db, user, group_id, "admin")
+    if not group.invite_token:
+        group.invite_token = new_id()
+        db.commit()
+    return {"token": group.invite_token, "url": f"/groups/join/{group.invite_token}"}
+
+
+@router.get("/join/{token}")
+def group_by_token(token: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    group = db.execute(select(Group).where(Group.invite_token == token)).scalar_one_or_none()
+    if group is None or group.archived_at is not None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return {
+        "id": group.id,
+        "name": group.name,
+        "description": group.description,
+        "already_member": is_group_member(db, user.id, group.id),
+    }
+
+
+@router.post("/join/{token}")
+def request_join(token: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    group = db.execute(select(Group).where(Group.invite_token == token)).scalar_one_or_none()
+    if group is None or group.archived_at is not None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if is_group_member(db, user.id, group.id):
+        return _out(db, group, user)
+    existing = db.execute(
+        select(GroupInvitation).where(
+            GroupInvitation.group_id == group.id,
+            GroupInvitation.invitee_id == user.id,
+            GroupInvitation.status == "pending",
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        db.add(
+            GroupInvitation(
+                group_id=group.id, invitee_id=user.id, inviter_id=group.owner_id,
+                role="member", status="pending",
+            )
+        )
+        db.commit()
+    return {"requested": True}
+
+
+@router.post("/requests/{request_id}/approve")
+def approve_request(request_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    req = db.get(GroupInvitation, request_id)
+    if req is None or req.status != "pending":
+        raise HTTPException(status_code=404, detail="Request not found")
+    group = _require_role(db, user, req.group_id, "admin")
+    target = db.get(User, req.invitee_id) if req.invitee_id else None
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    _add_member(db, group, target.id, req.role)
+    req.status = "accepted"
+    db.commit()
+    return _out(db, group, user)
+
+
+@router.post("/requests/{request_id}/reject")
+def reject_request(request_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    req = db.get(GroupInvitation, request_id)
+    if req is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    _require_role(db, user, req.group_id, "admin")
+    req.status = "declined"
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/{group_id}/invitations")

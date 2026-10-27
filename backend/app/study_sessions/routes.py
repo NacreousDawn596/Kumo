@@ -109,3 +109,41 @@ def add_resource(session_id: str, resource_type: str, resource_id: str, user: Us
     db.add(StudySessionResource(session_id=session_id, resource_type=resource_type, resource_id=resource_id, added_by=user.id))
     db.commit()
     return _out(db, session)
+
+
+@router.post("/{session_id}/invite-link")
+def invite_link(session_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.base import new_id
+
+    session = db.get(StudySession, session_id)
+    if session is None or session.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if not session.invite_token:
+        session.invite_token = new_id()
+        db.commit()
+    return {"token": session.invite_token, "url": f"/sessions/join/{session.invite_token}"}
+
+
+@router.get("/join/{token}")
+def session_by_token(token: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.execute(select(StudySession).where(StudySession.invite_token == token)).scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {
+        "id": session.id,
+        "name": session.name,
+        "already_member": _member(db, session.id, user.id),
+    }
+
+
+@router.post("/join/{token}")
+def join_by_token(token: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.execute(select(StudySession).where(StudySession.invite_token == token)).scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.group_id and not is_group_member(db, user.id, session.group_id):
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+    if not _member(db, session.id, user.id):
+        db.add(StudySessionMember(session_id=session.id, user_id=user.id))
+        db.commit()
+    return _out(db, session)

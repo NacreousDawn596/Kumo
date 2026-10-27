@@ -23,6 +23,7 @@ class StudySession(IdMixin, TimestampMixin, Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="scheduled", nullable=False)
     # scheduled|active|ended
+    invite_token: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     members: Mapped[list["StudySessionMember"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"

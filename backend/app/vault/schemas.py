@@ -21,6 +21,8 @@ class FileOut(BaseModel):
     updated_at: datetime
     permission: str | None = None
     is_linked: bool = False
+    is_public: bool = False
+    public_token: str | None = None
 
 
 class FilePatch(BaseModel):

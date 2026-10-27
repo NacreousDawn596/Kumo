@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { File, FileText, Folder, Image, Link2, MoreHorizontal, Share, Trash2, Upload, UserPlus, X } from "lucide-react";
+import { File, FileText, Folder, Globe, Image, Link2, MoreHorizontal, Share, Trash2, Upload, UserPlus, X } from "lucide-react";
 import { api, apiPost, apiUpload } from "../api/client.js";
 import { Button, Dialog, EmptyState, Input, Menu } from "../components/ui.jsx";
 import StorageMeter, { formatBytes } from "../components/StorageMeter.jsx";
@@ -22,6 +22,7 @@ export default function VaultPage() {
   const [transferFile, setTransferFile] = useState(null);
   const [transferQuery, setTransferQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [shareFile, setShareFile] = useState(null);
 
   const { data: files = [] } = useQuery({
     queryKey: ["files"],
@@ -35,6 +36,21 @@ export default function VaultPage() {
       fd.append("name", file.name);
       return apiUpload("/api/vault/files", fd);
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["files"] }),
+  });
+
+  const makePublic = useMutation({
+    mutationFn: (fileId) => apiPost(`/api/vault/files/${fileId}/make-public`),
+    onSuccess: (res, fileId) => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      const url = `${window.location.origin}${res.url}`;
+      setShareFile((s) => (s && s.id === fileId ? { ...s, public_url: url } : s));
+      navigator.clipboard?.writeText(url);
+    },
+  });
+
+  const makePrivate = useMutation({
+    mutationFn: (fileId) => apiPost(`/api/vault/files/${fileId}/make-private`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["files"] }),
   });
 
@@ -126,6 +142,8 @@ export default function VaultPage() {
                       f.previewable && { label: "Open", onClick: () => (window.location.href = `/documents/${f.id}`) },
                       { label: "Download", icon: Share, onClick: () => (window.location.href = `/api/vault/files/${f.id}/content`) },
                       { divider: true },
+                      { label: "Share", icon: Globe, onClick: () => setShareFile(f) },
+                      { divider: true },
                       !f.is_linked && { label: "Transfer to…", icon: UserPlus, onClick: () => setTransferFile(f) },
                       f.is_linked && { label: "Remove link", icon: X, onClick: () => unlink.mutate(f.id) },
                       !f.is_linked && { label: "Delete", icon: Trash2, danger: true, onClick: () => remove.mutate(f.id) },
@@ -175,6 +193,54 @@ export default function VaultPage() {
           ))}
         </div>
         {transfer.error && <p className="auth-error">{transfer.error.message}</p>}
+      </Dialog>
+
+      <Dialog
+        open={!!shareFile}
+        onClose={() => setShareFile(null)}
+        title={`Share “${shareFile?.name || ""}”`}
+      >
+        <p className="transfer-note">
+          Anyone with the link can view a public file. Toggle it off to make the file
+          private again.
+        </p>
+        <div className="share-toggle-row">
+          <span>{shareFile?.is_public ? "Public" : "Private"}</span>
+          <button
+            className={`share-toggle ${shareFile?.is_public ? "share-toggle-on" : ""}`}
+            onClick={() =>
+              shareFile?.is_public
+                ? makePrivate.mutate(shareFile.id)
+                : makePublic.mutate(shareFile.id)
+            }
+          >
+            <span className="share-toggle-knob" />
+          </button>
+        </div>
+        {shareFile?.is_public && (
+          <div className="share-link-row">
+            <Input
+              readOnly
+              value={
+                shareFile?.public_url ||
+                `${window.location.origin}/public/files/${shareFile?.public_token}`
+              }
+              onFocus={(e) => e.target.select()}
+            />
+            <Button
+              variant="secondary"
+              icon={Link2}
+              onClick={() => {
+                const url =
+                  shareFile?.public_url ||
+                  `${window.location.origin}/public/files/${shareFile?.public_token}`;
+                navigator.clipboard?.writeText(url);
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+        )}
       </Dialog>
     </div>
   );

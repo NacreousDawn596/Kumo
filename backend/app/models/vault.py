@@ -27,6 +27,8 @@ class File(IdMixin, TimestampMixin, Base):
     group_id: Mapped[str | None] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"), index=True, nullable=True
     )  # None => personal vault
+    is_public: Mapped[bool] = mapped_column(default=False, nullable=False)  # public share link
+    public_token: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     shares: Mapped[list["FileShare"]] = relationship(
         back_populates="file", cascade="all, delete-orphan"
