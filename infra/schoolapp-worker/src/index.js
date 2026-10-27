@@ -34,10 +34,10 @@ function rateLimited(ip) {
   return false;
 }
 
-function json(data, status = 200) {
+function json(data, status = 200, corsHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...corsHeaders },
   });
 }
 
@@ -133,48 +133,61 @@ async function verifyCredentials(env, email, password) {
   };
 }
 
+function corsOrigin(env, requestOrigin) {
+  const allowed = (env.ALLOWED_ORIGIN || "*")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (allowed.length === 0 || allowed.includes("*") || allowed.includes(requestOrigin)) {
+    return requestOrigin || "*";
+  }
+  return allowed[0];
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // CORS for the Kumo frontend.
+    // CORS for the Kumo frontend (comma-separated allow-list).
+    const origin = request.headers.get("origin") || "";
     const corsHeaders = {
-      "access-control-allow-origin": env.ALLOWED_ORIGIN || "*",
+      "access-control-allow-origin": corsOrigin(env, origin),
       "access-control-allow-methods": "POST, GET, OPTIONS",
       "access-control-allow-headers": "content-type",
+      vary: "Origin",
     };
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     if (url.pathname === "/health") {
-      return json({ ok: true }, 200);
+      return json({ ok: true }, 200, corsHeaders);
     }
 
     if (url.pathname === "/verify" && request.method === "POST") {
       const ip = request.headers.get("cf-connecting-ip") || "unknown";
       if (rateLimited(ip)) {
-        return json({ error: "Too many attempts. Try again shortly." }, 429);
+        return json({ error: "Too many attempts. Try again shortly." }, 429, corsHeaders);
       }
 
       let email;
       let password;
       try {
         const body = await request.text();
-        if (body.length > MAX_BODY_BYTES) return json({ error: "Request too large." }, 413);
+        if (body.length > MAX_BODY_BYTES) return json({ error: "Request too large." }, 413, corsHeaders);
         const parsed = JSON.parse(body);
         email = (parsed.email || "").trim();
         password = parsed.password || "";
       } catch {
-        return json({ error: "Invalid JSON." }, 400);
+        return json({ error: "Invalid JSON." }, 400, corsHeaders);
       }
 
       if (!email || !password || !email.includes("@") || password.length < 1) {
-        return json({ error: "Email and password are required." }, 400);
+        return json({ error: "Email and password are required." }, 400, corsHeaders);
       }
 
       if (!env.SCHOOLAPP_WORKER_SECRET) {
-        return json({ error: "Worker is not configured (missing secret)." }, 500);
+        return json({ error: "Worker is not configured (missing secret)." }, 500, corsHeaders);
       }
 
       let claims;
@@ -183,20 +196,21 @@ export default {
       } catch (err) {
         // Never leak internals or credentials; log a sanitized message.
         console.error("schoolapp verify error:", err && err.message ? err.message : String(err));
-        return json({ error: "Unable to verify with SchoolApp." }, 502);
+        return json({ error: "Unable to verify with SchoolApp." }, 502, corsHeaders);
       }
 
       if (!claims) {
-        return json({ error: "Invalid SchoolApp credentials." }, 401);
+        return json({ error: "Invalid SchoolApp credentials." }, 401, corsHeaders);
       }
 
       const assertion = await signAssertion(env.SCHOOLAPP_WORKER_SECRET, claims);
       return json(
         { assertion, sub: claims.sub, name: claims.name },
-        200
+        200,
+        corsHeaders
       );
     }
 
-    return json({ error: "Not found." }, 404);
+    return json({ error: "Not found." }, 404, corsHeaders);
   },
 };

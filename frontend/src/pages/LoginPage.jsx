@@ -1,32 +1,47 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth.js";
+import { api } from "../api/client.js";
 import { Button, Input } from "../components/ui.jsx";
-import SchoolAppLogin from "../components/SchoolAppLogin.jsx";
 import "./auth.css";
 
+const WORKER_URL = import.meta.env.VITE_SCHOOLAPP_WORKER_URL || "";
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { setUser } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [saOpen, setSaOpen] = useState(false);
-
-  const from = location.state?.from?.pathname || "/";
 
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
-      navigate(from, { replace: true });
+      // 1. Verify SchoolApp credentials and obtain a short-lived assertion.
+      const res = await fetch(`${WORKER_URL}/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || "SchoolApp sign-in failed.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Exchange the assertion for a Kumo session.
+      const user = await api("/api/auth/schoolapp/assert", {
+        method: "POST",
+        body: { assertion: data.assertion },
+      });
+      setUser(user);
+      navigate("/", { replace: true });
     } catch (err) {
-      setError(err.message || "Sign in failed");
-    } finally {
+      setError(err.message || "SchoolApp sign-in failed.");
       setLoading(false);
     }
   };
@@ -40,32 +55,24 @@ export default function LoginPage() {
           </span>
           <span className="brand-name">Kumo</span>
         </div>
-        <h1 className="auth-title">Welcome back</h1>
-        <p className="auth-subtitle">Your engineering workspace, in one place.</p>
-
-        <button className="auth-sso" type="button" onClick={() => setSaOpen(true)}>
-          <span className="auth-sso-dot" />
-          Continue with SchoolApp
-        </button>
-
-        <div className="auth-divider">
-          <span>or sign in with email</span>
-        </div>
+        <h1 className="auth-title">Sign in with SchoolApp</h1>
+        <p className="auth-subtitle">Use your SchoolApp account to continue.</p>
 
         <form onSubmit={submit} className="auth-form">
           <label className="auth-label">
-            Email
+            SchoolApp email
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@university.edu"
+              placeholder="you@schoolapp"
               autoComplete="email"
               required
+              autoFocus
             />
           </label>
           <label className="auth-label">
-            Password
+            SchoolApp password
             <Input
               type="password"
               value={password}
@@ -82,11 +89,9 @@ export default function LoginPage() {
         </form>
 
         <p className="auth-footer">
-          No account? <Link to="/register">Create one</Link>
+          Your password is used once to verify and is never stored.
         </p>
       </div>
-
-      <SchoolAppLogin open={saOpen} onClose={() => setSaOpen(false)} />
     </div>
   );
 }

@@ -11,12 +11,19 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
       AUTH_PROVIDER: ${AUTH_PROVIDER:-local}
+      # Shared HMAC secret with the SchoolApp identity worker.
+      SCHOOLAPP_WORKER_SECRET: ${SCHOOLAPP_WORKER_SECRET:-}
+      SCHOOLAPP_WORKER_ISSUER: schoolapp-worker
+      SCHOOLAPP_WORKER_AUDIENCE: kumo
     volumes:
       - kumo-data:/app/data
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_SCHOOLAPP_WORKER_URL: ${VITE_SCHOOLAPP_WORKER_URL:-https://schoolapp-worker.nacreousdawn596.workers.dev}
     ports:
       - "5480:80"
     depends_on:

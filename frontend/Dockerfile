@@ -2,6 +2,10 @@ FROM node:22-slim AS build
 
 WORKDIR /app
 
+# Public URL of the SchoolApp identity worker (overridable at build time).
+ARG VITE_SCHOOLAPP_WORKER_URL
+ENV VITE_SCHOOLAPP_WORKER_URL=$VITE_SCHOOLAPP_WORKER_URL
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

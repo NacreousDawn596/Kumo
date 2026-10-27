@@ -5,7 +5,6 @@ import { useTheme } from "./store/theme.js";
 import AppShell from "./layout/AppShell.jsx";
 import { Spinner } from "./components/ui.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
-import RegisterPage from "./pages/RegisterPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import InboxPage from "./pages/InboxPage.jsx";
 import CalendarPage from "./pages/CalendarPage.jsx";
@@ -60,7 +59,6 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
 
       <Route
         path="/"
