@@ -87,10 +87,13 @@ links (pan/zoom, click-to-open), plus a global search.
 
 - **Tasks** — title, description, status, priority, due date, assignee, and
   project/group association; list view with completion states.
-- **Projects** — lightweight project workspaces (API; see limitations).
-- **Calendar** — month view with events and **task deadlines** overlaid on
-  their due dates; event creation, participants, and responses; events can
-  link to a study session.
+- **Projects** — project workspaces with their own task list.
+- **Calendar** — **month / week / day / agenda** views; events and **task
+  deadlines** overlaid; event creation, participants, and responses; events
+  can link to a study session.
+- **Recurring events** — RFC 5545 RRULE strings (e.g. `FREQ=WEEKLY;BYDAY=MO`)
+  are expanded across the calendar.
+- **ICS export** — download the user's events as an `.ics` file.
 
 ---
 
@@ -101,11 +104,13 @@ links (pan/zoom, click-to-open), plus a global search.
 - Unread counters and read receipts.
 - **Realtime** delivery over WebSocket (presence + message events) — messages
   appear to other participants immediately.
+- **1:1 audio calls** — peer-to-peer WebRTC with WebSocket signaling (call,
+  accept, mute, hang up) directly from a conversation.
 - **Groups** — name/description, owner/admin/moderator/member/viewer roles,
   membership management, group vault, and group chat (membership stays in sync
   with the group conversation).
 - **Invitations** — invite by user, or generate a **shareable invite link**;
-  join-requests go through an **approve/reject** flow.
+  join-requests go through an **approve/reject** flow (with a full UI).
 
 ---
 
@@ -114,9 +119,9 @@ links (pan/zoom, click-to-open), plus a global search.
 - **Study rooms** — a session ties together participants, whiteboards, and
   linked documents; each room has its own view.
 - **Whiteboards** — infinite canvas with pen, rectangle, arrow, text, eraser,
-  select, and pan; **undo/redo** (Ctrl+Z / Ctrl+Y) and keyboard tool shortcuts.
-  Operations use a server-assigned sequence so concurrent edits merge
-  without conflict.
+  select, pan, and a **chemistry drawing tool** (place atoms + draw bonds);
+  **undo/redo** (Ctrl+Z / Ctrl+Y) and keyboard tool shortcuts. Operations use a
+  server-assigned sequence so concurrent edits merge without conflict.
 - **Collaborative PDF** — PDF.js rendering with a separate annotation layer
   (pen, highlighter, eraser, undo/redo); the source PDF stays immutable.
 - **Invite links** for study rooms.
@@ -136,25 +141,40 @@ links (pan/zoom, click-to-open), plus a global search.
 ## 9. Notifications
 
 - In-app notification center (list, unread badge, mark-read / mark-all-read).
+- **Browser push notifications** — service worker + VAPID subscription, with a
+  toggle in Settings (requires VAPID keys on the server to actually deliver).
 
 ---
 
-## 10. Settings & personalization
+## 10. Structured databases
+
+- **Databases** — collections of typed records with configurable properties
+  (text, number, checkbox, select, date, URL, relation, formula).
+- **Table view** with inline cell editing, add/delete rows and properties.
+- **Formula properties** — a safe, constrained expression evaluator
+  (`score * 0.3`, `max(a, b)`, …) that references other properties; arbitrary
+  code, imports, and attribute access are rejected.
+
+---
+
+## 11. Settings & personalization
 
 - **Appearance** — light / dark / system theme; **8 accent colors**
   (purple, blue, indigo, teal, green, orange, rose, cyan), each rendered in
   light and dark (16 combinations); **corner-radius** and **text-size**
   sliders, applied live and persisted.
+- **Notifications** — browser-push toggle.
 - **Profile**, **Storage** (quota usage), and **Account** (sign-out).
 
 ---
 
-## 11. Platform & operations
+## 12. Platform & operations
 
 - **Stack** — React (Vite) frontend; FastAPI + SQLAlchemy 2.x + Alembic
   backend; PostgreSQL in production (SQLite fallback for local dev/tests).
 - **Docker Compose** — PostgreSQL + backend + nginx serving the whole app on a
-  single port (5480); health checks and persistent volumes.
+  single port (5480); health checks and persistent volumes; optional **LiveKit**
+  service for group audio.
 - **Backups** — documented `pg_dump` + file-storage procedure.
 - **NixOS** deployment instructions.
 - **Concurrency** — validated for ~100 concurrent users (PostgreSQL connection
@@ -162,12 +182,13 @@ links (pan/zoom, click-to-open), plus a global search.
 
 ---
 
-## 12. Security (summary)
+## 13. Security (summary)
 
 - Server-enforced authorization on every protected route (deny-by-default);
   `404` for resources the caller must not know exist.
 - Traversal-safe file storage, size/quota limits, and no execution of uploads.
-- Markdown sanitization; parameterized queries; narrow CORS.
+- Markdown sanitization; parameterized queries; narrow CORS; safe formula
+  evaluation.
 - WebSocket room authorization re-checked on every relay.
 
 ---
@@ -176,14 +197,13 @@ links (pan/zoom, click-to-open), plus a global search.
 
 Stated plainly so reviewers aren't misled:
 
-- **Group audio** — 1:1 WebRTC signaling config exists, but there is no in-app
-  call UI and no LiveKit SFU for group calls yet.
-- **Browser push notifications** — the in-app center exists; OS push does not.
-- **Structured databases / collections** — schema models exist, but there is
-  no UI or API surface yet.
-- **Week / day / agenda calendar views** — month view is implemented.
-- **Formula fields**, **recurrence rules**, **CalDAV/ICS sync**, and a
-  **chemical-structure editor** are not implemented.
-- **Projects** — backend API exists; no dedicated frontend page yet.
-- Group invite-link **copy/approve UI** is complete on the backend but not yet
-  surfaced in the Groups page UI.
+- **Group audio media** — the LiveKit SFU is wired (token endpoint + Docker
+  service + config) and 1:1 WebRTC calls work, but group-call *media* needs the
+  LiveKit server deployed and a `livekit-client` join flow in the frontend.
+- **Browser push delivery** — the subscription flow and service worker are in
+  place; actually *sending* pushes requires VAPID keys to be configured.
+- **CalDAV (two-way sync)** — only ICS *export* is implemented; there is no
+  CalDAV server or import.
+- **Database board/gallery views** — only the table view is implemented.
+- **Chemical-structure *validation*** — the chemistry tool draws atoms and
+  bonds; it does not check or validate chemistry.
