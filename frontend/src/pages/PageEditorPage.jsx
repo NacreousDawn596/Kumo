@@ -45,9 +45,9 @@ export default function PageEditorPage() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState([]);
-  const [version, setVersion] = useState(0);
   const [conflict, setConflict] = useState(false);
   const initializedFor = useRef(null);
+  const versionRef = useRef(0);
 
   const { data: page, isLoading } = useQuery({
     queryKey: ["page", pageId],
@@ -57,7 +57,7 @@ export default function PageEditorPage() {
   useEffect(() => {
     if (page && initializedFor.current !== pageId) {
       setTitle(page.title);
-      setVersion(page.version || 0);
+      versionRef.current = page.version || 0;
       setBlocks(
         page.blocks.map((b) => ({
           id: b.id,
@@ -81,11 +81,11 @@ export default function PageEditorPage() {
   });
 
   const saveBlocks = useMutation({
-    mutationFn: ({ bs, v }) =>
-      api(`/api/pages/${pageId}/blocks?expected_version=${v}`, { method: "PUT", body: bs }),
+    mutationFn: ({ bs }) =>
+      api(`/api/pages/${pageId}/blocks?expected_version=${versionRef.current}`, { method: "PUT", body: bs }),
     onSuccess: () => {
       setConflict(false);
-      setVersion((v) => v + 1);
+      versionRef.current += 1;
     },
     onError: (err) => {
       if (err.status === 409) setConflict(true);
@@ -93,7 +93,7 @@ export default function PageEditorPage() {
   });
 
   const debouncedSaveTitle = useRef(debounce((t) => saveTitle.mutate(t), 500)).current;
-  const debouncedSaveBlocks = useRef(debounce((bs) => saveBlocks.mutate({ bs, v: version }), 700)).current;
+  const debouncedSaveBlocks = useRef(debounce((bs) => saveBlocks.mutate({ bs }), 700)).current;
 
   const persist = (next) => {
     setBlocks(next);
