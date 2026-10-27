@@ -1,9 +1,24 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kumo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kumo}
+      POSTGRES_DB: kumo
+    volumes:
+      - kumo-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kumo -d kumo"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
   backend:
     build: ./backend
     environment:
       ENVIRONMENT: production
-      DATABASE_URL: sqlite:////app/data/kumo.db
+      DATABASE_URL: postgresql://kumo:${POSTGRES_PASSWORD:-kumo}@postgres:5432/kumo
       STORAGE_PATH: /app/data/storage
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5480}
@@ -17,6 +32,9 @@ services:
       SCHOOLAPP_WORKER_AUDIENCE: kumo
     volumes:
       - kumo-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -32,3 +50,4 @@ services:
 
 volumes:
   kumo-data:
+  kumo-pgdata:

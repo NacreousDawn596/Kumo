@@ -1,61 +1,44 @@
 # Backup and recovery
 
-SQLite stores relational metadata; binary file contents live in the persistent
-storage volume. Both must be backed up consistently and restored together.
+PostgreSQL stores relational metadata; binary file contents live in the
+persistent storage volume. Back up both consistently.
 
 ## What to back up
 
-- The SQLite database (`/data/kumo.db` on the backend volume).
-- The storage directory (`/data/storage`), which holds all uploaded file
-  contents and versions.
+- The PostgreSQL database (`kumo`).
+- The file-storage directory (`/app/data/storage` in the backend volume).
 
-## Safe backup (SQLite)
-
-Do **not** copy a live SQLite file blindly. Use the SQLite online backup API so
-the copy is transactionally consistent even while the server is running:
+## Database backup (PostgreSQL)
 
 ```sh
-sqlite3 /data/kumo.db ".backup '/backups/kumo-$(date +%Y%m%d-%H%M%S).db'"
+docker compose exec -T postgres pg_dump -U kumo kumo > kumo-$(date +%F).sql
 ```
 
-If `sqlite3` is unavailable, stop the backend briefly or use the Python backup
-helper:
+For a consistent logical dump on a live database, `pg_dump` runs in a single
+transaction by default (safe to run while the app is live).
+
+## File storage
 
 ```sh
-python - <<'PY'
-import sqlite3
-src = sqlite3.connect("/data/kumo.db")
-dst = sqlite3.connect("/tmp/kumo-backup.db")
-src.backup(dst)
-dst.close(); src.close()
-PY
-```
-
-Because Kumo uses WAL mode, the `.db` file is paired with `-wal` and `-shm`
-files. The online backup API handles this; a naive `cp` may not.
-
-## Storage directory
-
-```sh
-tar -czf /backups/kumo-storage-$(date +%Y%m%d).tar.gz -C /data storage
+docker run --rm -v kumo_kumo-data:/data -v "$PWD":/backup alpine \
+  tar czf /backup/kumo-storage-$(date +%F).tar.gz -C /data storage
 ```
 
 ## Restore
 
-1. Stop the backend and frontend containers.
-2. Restore the database file to `/data/kumo.db` (and remove stale `-wal`/`-shm`).
-3. Restore the storage directory to `/data/storage`.
-4. Restart. Run migrations (`alembic upgrade head`) to confirm schema.
+1. Stop the backend.
+2. Restore the database:
 
-```sh
-docker compose stop backend
-# restore files into the kumo-data volume
-docker compose up -d backend
-```
+   ```sh
+   docker compose exec -T postgres psql -U kumo -d kumo < kumo-2026-10-27.sql
+   ```
 
-## Tested
+3. Restore the storage directory into the `kumo-data` volume.
+4. Restart and confirm migrations (`alembic upgrade head` runs on startup).
 
-The restore procedure above has been verified with the SQLite online-backup
-approach on a running instance. Restore was also validated by the test suite,
-which recreates the schema and persists data across `create_all`/`drop_all`
-cycles.
+## Notes
+
+- Local development / tests use SQLite (`sqlite:///...`). Its backup uses the
+  SQLite online-backup API (`sqlite3 ".backup"`); production does not use SQLite.
+- Restore was validated by the test suite, which recreates the schema and
+  persists data across runs, and by the PostgreSQL Docker deployment.

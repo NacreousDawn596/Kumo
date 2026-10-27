@@ -1,7 +1,8 @@
 # NixOS deployment
 
-Kumo deploys as two containers (FastAPI backend + nginx frontend) via Docker
-Compose, with SQLite and file storage on persistent local volumes.
+Kumo deploys as three containers (PostgreSQL + FastAPI backend + nginx frontend)
+via Docker Compose, with the database and file storage on persistent local
+volumes.
 
 ## Runtime prerequisites
 
@@ -23,7 +24,8 @@ git clone <repo> /opt/kumo
 cd /opt/kumo
 cp .env.example .env
 # Edit .env: set SECRET_KEY (openssl rand -hex 32), COOKIE_SECURE=true,
-# FRONTEND_ORIGIN=https://your.domain, ALLOWED_ORIGINS=https://your.domain
+# POSTGRES_PASSWORD, FRONTEND_ORIGIN=https://your.domain,
+# ALLOWED_ORIGINS=https://your.domain
 ```
 
 ## Build and start
@@ -35,14 +37,15 @@ docker compose up -d --build
 The whole app (frontend + API + WebSocket) is served on a single port, **5480**
 (`http://localhost:5480`). nginx serves the built frontend and proxies `/api/*`
 (including WebSocket) to the backend. Put an HTTPS reverse proxy (Caddy/nginx)
-in front for production. SQLite data persists in the `kumo-data` named volume.
+in front for production.
 
 ## Persistent storage
 
-The `kumo-data` volume holds both `/app/data/kumo.db` (SQLite) and
-`/app/data/storage` (file contents). On NixOS, Docker named volumes live under
-`/var/lib/docker`; keep this on a suitable local filesystem (SQLite needs
-reliable local locking — do **not** put it on NFS or other network filesystems).
+- `kumo-pgdata` — PostgreSQL data (`/var/lib/postgresql/data`).
+- `kumo-data` — uploaded file contents (`/app/data/storage`).
+
+On NixOS, Docker named volumes live under `/var/lib/docker`; keep these on a
+suitable local filesystem.
 
 ## Database migrations
 
@@ -72,12 +75,12 @@ docker compose logs -f frontend
 See `docs/BACKUP_RECOVERY.md`. Briefly:
 
 ```sh
-docker compose exec backend sh -c 'python - <<PY
-import sqlite3
-src = sqlite3.connect("/data/kumo.db")
-dst = sqlite3.connect("/tmp/kumo-backup.db")
-src.backup(dst); dst.close(); src.close()
-PY'
+# Database dump (PostgreSQL)
+docker compose exec -T postgres pg_dump -U kumo kumo > kumo-$(date +%F).sql
+
+# File storage
+docker run --rm -v kumo_kumo-data:/data -v $PWD:/backup alpine \
+  tar czf /backup/kumo-storage-$(date +%F).tar.gz -C /data storage
 ```
 
 ## Troubleshooting

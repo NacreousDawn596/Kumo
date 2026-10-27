@@ -34,10 +34,16 @@ const BLOCK_TYPES = [
 
 function debounce(fn, ms) {
   let t;
-  return (...args) => {
+  const debounced = (...args) => {
     clearTimeout(t);
     t = setTimeout(() => fn(...args), ms);
   };
+  debounced.cancel = () => clearTimeout(t);
+  debounced.flush = (...args) => {
+    clearTimeout(t);
+    fn(...args);
+  };
+  return debounced;
 }
 
 export default function PageEditorPage() {
@@ -92,13 +98,50 @@ export default function PageEditorPage() {
     },
   });
 
+  const blocksRef = useRef([]);
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
+
+  const saveNow = (bs) => {
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
+    saveBlocks.mutate({ bs: bs.map(({ id, block_type, content }) => ({ id, block_type, content })) });
+  };
+
   const debouncedSaveTitle = useRef(debounce((t) => saveTitle.mutate(t), 500)).current;
-  const debouncedSaveBlocks = useRef(debounce((bs) => saveBlocks.mutate({ bs }), 700)).current;
+  const debouncedSaveBlocks = useRef(debounce(() => saveNow(blocksRef.current), 700)).current;
 
   const persist = (next) => {
     setBlocks(next);
-    debouncedSaveBlocks(next.map(({ id, block_type, content }) => ({ id, block_type, content })));
+    dirtyRef.current = true;
+    debouncedSaveBlocks();
   };
+
+  // Flush any pending block save when the user navigates away or unmounts.
+  const flushRef = useRef(null);
+  useEffect(() => {
+    flushRef.current = () => {
+      debouncedSaveBlocks.cancel();
+      if (dirtyRef.current) {
+        dirtyRef.current = false;
+        saveBlocks.mutate({
+          bs: blocksRef.current.map(({ id, block_type, content }) => ({ id, block_type, content })),
+        });
+      }
+    };
+  });
+
+  useEffect(() => {
+    const flush = () => flushRef.current?.();
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      flushRef.current?.();
+    };
+  }, []);
 
   const updateBlock = (id, patch) => {
     persist(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));

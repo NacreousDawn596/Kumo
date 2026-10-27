@@ -32,7 +32,14 @@ def _make_engine():
             poolclass=NullPool,
             pool_pre_ping=True,
         )
-    return create_engine(url, pool_pre_ping=True)
+    # PostgreSQL (or any SQLAlchemy-supported server DB): use a connection pool.
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=30,
+        pool_recycle=1800,
+    )
 
 
 engine = _make_engine()

@@ -24,7 +24,7 @@ study engineering, and collaborate lives in one connected workspace.
 
 - **Frontend**: React (JS), Vite, React Router, TanStack Query, Zustand,
   Lucide, KaTeX, react-markdown, PDF.js, d3-force.
-- **Backend**: FastAPI, SQLAlchemy 2.x, SQLite, Alembic, Argon2id.
+- **Backend**: FastAPI, SQLAlchemy 2.x, PostgreSQL, Alembic, Argon2id.
 - **Realtime**: WebSocket (presence/events); WebRTC for peer audio.
 
 ## Quick start (development)
@@ -32,7 +32,7 @@ study engineering, and collaborate lives in one connected workspace.
 Prerequisites: Node 20+, Python 3.12+, `uv`.
 
 ```sh
-# Backend
+# Backend (uses PostgreSQL via DATABASE_URL; see .env.example)
 cd backend
 uv sync
 uv run alembic upgrade head
@@ -43,6 +43,9 @@ cd frontend
 npm install
 npm run dev        # http://localhost:5173 (proxies /api to :8000)
 ```
+
+For local development without PostgreSQL you can still use SQLite by setting
+`DATABASE_URL=sqlite:///./data/kumo.db`.
 
 Sign in with your **SchoolApp** account (identity verified via the deployed
 Cloudflare Worker — see `infra/schoolapp-worker/`). Local email/password auth

@@ -1,21 +1,18 @@
 # Concurrency & scaling (target: ~100 concurrent users)
 
-Kumo is built for a single-application-instance deployment serving roughly 100
-concurrent users with no data-loss conflicts. This document explains the
-architecture, the guarantees, and the path to scale beyond that.
+Kumo's production database is PostgreSQL. The backend keeps a thin SQLite
+fallback for local development and tests, but all deployed instances and the
+concurrency guarantees below assume PostgreSQL.
 
-## Database: SQLite hardened for concurrent writes
+## Database
 
-- **WAL mode** (`journal_mode=WAL`): concurrent readers + one writer, no
-  read/write blocking.
-- **`synchronous=NORMAL`**: durable under WAL, faster than FULL.
-- **`busy_timeout=10000`**: concurrent writers *queue* instead of erroring with
-  "database is locked".
-- **`NullPool`**: each operation opens a fresh connection. SQLite connections
-  are cheap and this avoids cross-thread pool races (a `QueuePool` with
-  `pool_size` causes session re-entrancy errors under 100 concurrent writers).
-- **Short transactions**: every route commits and releases the write lock
-  quickly; transient presence/typing/cursors are never written to the DB.
+- **PostgreSQL** with a connection pool (`pool_size=10`, `max_overflow=30`,
+  `pool_pre_ping`) handles concurrent readers and writers without the
+  single-writer limitation of SQLite.
+- The models and Alembic migrations are portable across both backends; only the
+  engine construction (`app/core/database.py`) and pragmas are backend-specific.
+- For local dev/tests, `DATABASE_URL=sqlite:///./data/kumo.db` still works
+  (WAL + `busy_timeout` + `NullPool`), but it is not the production path.
 
 Verified by `tests/test_concurrency.py`, which runs 100 concurrent users sending
 messages and drawing on a shared whiteboard and asserts nothing is lost.
@@ -41,11 +38,8 @@ serves 100 concurrent async connections. See the worker note below.
 
 ### Scaling beyond one instance
 
-Two things are required to run multiple workers/instances:
-
-1. **Database**: point `DATABASE_URL` at PostgreSQL. SQLAlchemy/Alembic models
-   are portable; only the SQLite-specific pragmas and the `NullPool` branch are
-   SQLite-specific. Migrations already use batch mode.
+1. **Database**: PostgreSQL already runs as its own service and scales
+   independently (replicas, PgBouncer, etc.).
 2. **Realtime**: replace the in-process `ConnectionManager` with a shared
    pub/sub bus (Redis). Each worker publishes events to Redis and subscribes for
    rooms it hosts; presence becomes a Redis-managed set. The event envelope and

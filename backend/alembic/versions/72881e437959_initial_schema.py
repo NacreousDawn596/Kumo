@@ -1,15 +1,15 @@
 """initial schema
 
-Revision ID: 0314efe1d4d0
+Revision ID: 72881e437959
 Revises: 
-Create Date: 2026-10-24 19:28:23.818412
+Create Date: 2026-10-27 03:47:44.386114
 """
 
 from alembic import op
 import sqlalchemy as sa
 
 
-revision = '0314efe1d4d0'
+revision = '72881e437959'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -36,10 +36,8 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_users_email'), ['email'], unique=True)
-        batch_op.create_index(batch_op.f('ix_users_username'), ['username'], unique=True)
-
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
     op.create_table('audit_events',
     sa.Column('user_id', sa.String(length=32), nullable=True),
     sa.Column('action', sa.String(length=64), nullable=False),
@@ -52,10 +50,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('audit_events', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_audit_events_action'), ['action'], unique=False)
-        batch_op.create_index(batch_op.f('ix_audit_events_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_audit_events_action'), 'audit_events', ['action'], unique=False)
+    op.create_index(op.f('ix_audit_events_user_id'), 'audit_events', ['user_id'], unique=False)
     op.create_table('contacts',
     sa.Column('owner_id', sa.String(length=32), nullable=False),
     sa.Column('contact_user_id', sa.String(length=32), nullable=False),
@@ -68,10 +64,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('contacts', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_contacts_contact_user_id'), ['contact_user_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_contacts_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_contacts_contact_user_id'), 'contacts', ['contact_user_id'], unique=False)
+    op.create_index(op.f('ix_contacts_owner_id'), 'contacts', ['owner_id'], unique=False)
     op.create_table('external_identities',
     sa.Column('user_id', sa.String(length=32), nullable=False),
     sa.Column('provider', sa.String(length=32), nullable=False),
@@ -81,11 +75,9 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sqlite_autoincrement=False
+    sa.UniqueConstraint('provider', 'subject', name='uq_external_identity')
     )
-    with op.batch_alter_table('external_identities', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_external_identities_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_external_identities_user_id'), 'external_identities', ['user_id'], unique=False)
     op.create_table('groups',
     sa.Column('name', sa.String(length=120), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
@@ -97,9 +89,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('groups', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_groups_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_groups_owner_id'), 'groups', ['owner_id'], unique=False)
     op.create_table('invitations',
     sa.Column('target_type', sa.String(length=32), nullable=False),
     sa.Column('target_id', sa.String(length=32), nullable=False),
@@ -115,11 +105,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['inviter_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('invitations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_invitations_invitee_id'), ['invitee_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_invitations_inviter_id'), ['inviter_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_invitations_target_id'), ['target_id'], unique=False)
-
+    op.create_index(op.f('ix_invitations_invitee_id'), 'invitations', ['invitee_id'], unique=False)
+    op.create_index(op.f('ix_invitations_inviter_id'), 'invitations', ['inviter_id'], unique=False)
+    op.create_index(op.f('ix_invitations_target_id'), 'invitations', ['target_id'], unique=False)
     op.create_table('notifications',
     sa.Column('user_id', sa.String(length=32), nullable=False),
     sa.Column('type', sa.String(length=32), nullable=False),
@@ -135,9 +123,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('notifications', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_notifications_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_notifications_user_id'), 'notifications', ['user_id'], unique=False)
     op.create_table('security_events',
     sa.Column('user_id', sa.String(length=32), nullable=True),
     sa.Column('event_type', sa.String(length=64), nullable=False),
@@ -149,10 +135,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('security_events', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_security_events_event_type'), ['event_type'], unique=False)
-        batch_op.create_index(batch_op.f('ix_security_events_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_security_events_event_type'), 'security_events', ['event_type'], unique=False)
+    op.create_index(op.f('ix_security_events_user_id'), 'security_events', ['user_id'], unique=False)
     op.create_table('sessions',
     sa.Column('user_id', sa.String(length=32), nullable=False),
     sa.Column('refresh_token_hash', sa.String(length=64), nullable=False),
@@ -166,10 +150,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('sessions', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_sessions_refresh_token_hash'), ['refresh_token_hash'], unique=True)
-        batch_op.create_index(batch_op.f('ix_sessions_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_sessions_refresh_token_hash'), 'sessions', ['refresh_token_hash'], unique=True)
+    op.create_index(op.f('ix_sessions_user_id'), 'sessions', ['user_id'], unique=False)
     op.create_table('tags',
     sa.Column('owner_id', sa.String(length=32), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -180,9 +162,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('tags', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_tags_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_tags_owner_id'), 'tags', ['owner_id'], unique=False)
     op.create_table('user_settings',
     sa.Column('user_id', sa.String(length=32), nullable=False),
     sa.Column('key', sa.String(length=64), nullable=False),
@@ -201,9 +181,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('collections', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_collections_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_collections_owner_id'), 'collections', ['owner_id'], unique=False)
     op.create_table('conversations',
     sa.Column('kind', sa.String(length=16), nullable=False),
     sa.Column('group_id', sa.String(length=32), nullable=True),
@@ -214,9 +192,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('conversations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_conversations_group_id'), ['group_id'], unique=False)
-
+    op.create_index(op.f('ix_conversations_group_id'), 'conversations', ['group_id'], unique=False)
     op.create_table('files',
     sa.Column('owner_id', sa.String(length=32), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -236,10 +212,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('files', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_files_group_id'), ['group_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_files_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_files_group_id'), 'files', ['group_id'], unique=False)
+    op.create_index(op.f('ix_files_owner_id'), 'files', ['owner_id'], unique=False)
     op.create_table('group_invitations',
     sa.Column('group_id', sa.String(length=32), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=True),
@@ -256,10 +230,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['inviter_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('group_invitations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_group_invitations_group_id'), ['group_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_group_invitations_inviter_id'), ['inviter_id'], unique=False)
-
+    op.create_index(op.f('ix_group_invitations_group_id'), 'group_invitations', ['group_id'], unique=False)
+    op.create_index(op.f('ix_group_invitations_inviter_id'), 'group_invitations', ['inviter_id'], unique=False)
     op.create_table('group_members',
     sa.Column('group_id', sa.String(length=32), nullable=False),
     sa.Column('user_id', sa.String(length=32), nullable=False),
@@ -270,9 +242,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('group_id', 'user_id'),
     sa.UniqueConstraint('group_id', 'user_id', name='uq_group_member')
     )
-    with op.batch_alter_table('group_members', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_group_members_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_group_members_user_id'), 'group_members', ['user_id'], unique=False)
     op.create_table('group_settings',
     sa.Column('group_id', sa.String(length=32), nullable=False),
     sa.Column('key', sa.String(length=64), nullable=False),
@@ -289,6 +259,7 @@ def upgrade() -> None:
     sa.Column('group_id', sa.String(length=32), nullable=True),
     sa.Column('is_archived', sa.Boolean(), nullable=False),
     sa.Column('content_md', sa.Text(), nullable=True),
+    sa.Column('version', sa.Integer(), nullable=False),
     sa.Column('id', sa.String(length=32), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
@@ -297,10 +268,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['parent_id'], ['pages.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('pages', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_pages_owner_id'), ['owner_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_pages_parent_id'), ['parent_id'], unique=False)
-
+    op.create_index(op.f('ix_pages_owner_id'), 'pages', ['owner_id'], unique=False)
+    op.create_index(op.f('ix_pages_parent_id'), 'pages', ['parent_id'], unique=False)
     op.create_table('projects',
     sa.Column('name', sa.String(length=160), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
@@ -314,9 +283,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('projects', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_projects_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_projects_owner_id'), 'projects', ['owner_id'], unique=False)
     op.create_table('study_sessions',
     sa.Column('name', sa.String(length=160), nullable=False),
     sa.Column('owner_id', sa.String(length=32), nullable=False),
@@ -331,9 +298,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('study_sessions', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_study_sessions_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_study_sessions_owner_id'), 'study_sessions', ['owner_id'], unique=False)
     op.create_table('calendar_events',
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
@@ -355,10 +320,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['study_session_id'], ['study_sessions.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('calendar_events', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_calendar_events_organizer_id'), ['organizer_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_calendar_events_start_at'), ['start_at'], unique=False)
-
+    op.create_index(op.f('ix_calendar_events_organizer_id'), 'calendar_events', ['organizer_id'], unique=False)
+    op.create_index(op.f('ix_calendar_events_start_at'), 'calendar_events', ['start_at'], unique=False)
     op.create_table('collection_items',
     sa.Column('collection_id', sa.String(length=32), nullable=False),
     sa.Column('file_id', sa.String(length=32), nullable=False),
@@ -368,9 +331,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('collection_id', 'file_id'),
     sa.UniqueConstraint('collection_id', 'file_id', name='uq_collection_item')
     )
-    with op.batch_alter_table('collection_items', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_collection_items_file_id'), ['file_id'], unique=False)
-
+    op.create_index(op.f('ix_collection_items_file_id'), 'collection_items', ['file_id'], unique=False)
     op.create_table('conversation_members',
     sa.Column('conversation_id', sa.String(length=32), nullable=False),
     sa.Column('user_id', sa.String(length=32), nullable=False),
@@ -382,9 +343,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('conversation_id', 'user_id'),
     sa.UniqueConstraint('conversation_id', 'user_id', name='uq_conv_member')
     )
-    with op.batch_alter_table('conversation_members', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_conversation_members_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_conversation_members_user_id'), 'conversation_members', ['user_id'], unique=False)
     op.create_table('databases',
     sa.Column('owner_id', sa.String(length=32), nullable=False),
     sa.Column('page_id', sa.String(length=32), nullable=True),
@@ -398,9 +357,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['page_id'], ['pages.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('databases', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_databases_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_databases_owner_id'), 'databases', ['owner_id'], unique=False)
     op.create_table('document_annotations',
     sa.Column('file_id', sa.String(length=32), nullable=False),
     sa.Column('author_id', sa.String(length=32), nullable=False),
@@ -420,10 +377,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['session_id'], ['study_sessions.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('document_annotations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_document_annotations_author_id'), ['author_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_document_annotations_file_id'), ['file_id'], unique=False)
-
+    op.create_index(op.f('ix_document_annotations_author_id'), 'document_annotations', ['author_id'], unique=False)
+    op.create_index(op.f('ix_document_annotations_file_id'), 'document_annotations', ['file_id'], unique=False)
     op.create_table('file_comments',
     sa.Column('file_id', sa.String(length=32), nullable=False),
     sa.Column('author_id', sa.String(length=32), nullable=False),
@@ -439,10 +394,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['reply_to_id'], ['file_comments.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('file_comments', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_file_comments_author_id'), ['author_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_file_comments_file_id'), ['file_id'], unique=False)
-
+    op.create_index(op.f('ix_file_comments_author_id'), 'file_comments', ['author_id'], unique=False)
+    op.create_index(op.f('ix_file_comments_file_id'), 'file_comments', ['file_id'], unique=False)
     op.create_table('file_shares',
     sa.Column('file_id', sa.String(length=32), nullable=False),
     sa.Column('shared_with_user_id', sa.String(length=32), nullable=True),
@@ -459,11 +412,9 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('file_id', 'shared_with_user_id', name='uq_file_share_user')
     )
-    with op.batch_alter_table('file_shares', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_file_shares_file_id'), ['file_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_file_shares_shared_with_group_id'), ['shared_with_group_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_file_shares_shared_with_user_id'), ['shared_with_user_id'], unique=False)
-
+    op.create_index(op.f('ix_file_shares_file_id'), 'file_shares', ['file_id'], unique=False)
+    op.create_index(op.f('ix_file_shares_shared_with_group_id'), 'file_shares', ['shared_with_group_id'], unique=False)
+    op.create_index(op.f('ix_file_shares_shared_with_user_id'), 'file_shares', ['shared_with_user_id'], unique=False)
     op.create_table('file_tags',
     sa.Column('file_id', sa.String(length=32), nullable=False),
     sa.Column('tag_id', sa.String(length=32), nullable=False),
@@ -472,9 +423,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('file_id', 'tag_id'),
     sa.UniqueConstraint('file_id', 'tag_id', name='uq_file_tag')
     )
-    with op.batch_alter_table('file_tags', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_file_tags_tag_id'), ['tag_id'], unique=False)
-
+    op.create_index(op.f('ix_file_tags_tag_id'), 'file_tags', ['tag_id'], unique=False)
     op.create_table('file_versions',
     sa.Column('file_id', sa.String(length=32), nullable=False),
     sa.Column('version', sa.Integer(), nullable=False),
@@ -489,10 +438,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['file_id'], ['files.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('file_versions', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_file_versions_created_by'), ['created_by'], unique=False)
-        batch_op.create_index(batch_op.f('ix_file_versions_file_id'), ['file_id'], unique=False)
-
+    op.create_index(op.f('ix_file_versions_created_by'), 'file_versions', ['created_by'], unique=False)
+    op.create_index(op.f('ix_file_versions_file_id'), 'file_versions', ['file_id'], unique=False)
     op.create_table('messages',
     sa.Column('conversation_id', sa.String(length=32), nullable=False),
     sa.Column('sender_id', sa.String(length=32), nullable=False),
@@ -509,11 +456,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['sender_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('messages', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_messages_conversation_id'), ['conversation_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_messages_created_at'), ['created_at'], unique=False)
-        batch_op.create_index(batch_op.f('ix_messages_sender_id'), ['sender_id'], unique=False)
-
+    op.create_index(op.f('ix_messages_conversation_id'), 'messages', ['conversation_id'], unique=False)
+    op.create_index(op.f('ix_messages_created_at'), 'messages', ['created_at'], unique=False)
+    op.create_index(op.f('ix_messages_sender_id'), 'messages', ['sender_id'], unique=False)
     op.create_table('page_blocks',
     sa.Column('page_id', sa.String(length=32), nullable=False),
     sa.Column('parent_block_id', sa.String(length=32), nullable=True),
@@ -529,10 +474,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['parent_block_id'], ['page_blocks.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('page_blocks', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_page_blocks_created_by'), ['created_by'], unique=False)
-        batch_op.create_index(batch_op.f('ix_page_blocks_page_id'), ['page_id'], unique=False)
-
+    op.create_index(op.f('ix_page_blocks_created_by'), 'page_blocks', ['created_by'], unique=False)
+    op.create_index(op.f('ix_page_blocks_page_id'), 'page_blocks', ['page_id'], unique=False)
     op.create_table('page_links',
     sa.Column('source_id', sa.String(length=32), nullable=False),
     sa.Column('target_id', sa.String(length=32), nullable=False),
@@ -546,10 +489,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['target_id'], ['pages.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('page_links', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_page_links_source_id'), ['source_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_page_links_target_id'), ['target_id'], unique=False)
-
+    op.create_index(op.f('ix_page_links_source_id'), 'page_links', ['source_id'], unique=False)
+    op.create_index(op.f('ix_page_links_target_id'), 'page_links', ['target_id'], unique=False)
     op.create_table('page_permissions',
     sa.Column('page_id', sa.String(length=32), nullable=False),
     sa.Column('subject_type', sa.String(length=16), nullable=False),
@@ -562,9 +503,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('page_id', 'subject_type', 'subject_id', name='uq_page_perm')
     )
-    with op.batch_alter_table('page_permissions', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_page_permissions_page_id'), ['page_id'], unique=False)
-
+    op.create_index(op.f('ix_page_permissions_page_id'), 'page_permissions', ['page_id'], unique=False)
     op.create_table('page_revisions',
     sa.Column('page_id', sa.String(length=32), nullable=False),
     sa.Column('revision', sa.Integer(), nullable=False),
@@ -577,10 +516,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['page_id'], ['pages.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('page_revisions', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_page_revisions_author_id'), ['author_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_page_revisions_page_id'), ['page_id'], unique=False)
-
+    op.create_index(op.f('ix_page_revisions_author_id'), 'page_revisions', ['author_id'], unique=False)
+    op.create_index(op.f('ix_page_revisions_page_id'), 'page_revisions', ['page_id'], unique=False)
     op.create_table('page_tags',
     sa.Column('page_id', sa.String(length=32), nullable=False),
     sa.Column('tag_id', sa.String(length=32), nullable=False),
@@ -589,9 +526,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('page_id', 'tag_id'),
     sa.UniqueConstraint('page_id', 'tag_id', name='uq_page_tag')
     )
-    with op.batch_alter_table('page_tags', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_page_tags_tag_id'), ['tag_id'], unique=False)
-
+    op.create_index(op.f('ix_page_tags_tag_id'), 'page_tags', ['tag_id'], unique=False)
     op.create_table('project_members',
     sa.Column('project_id', sa.String(length=32), nullable=False),
     sa.Column('user_id', sa.String(length=32), nullable=False),
@@ -600,9 +535,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('project_id', 'user_id')
     )
-    with op.batch_alter_table('project_members', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_project_members_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_project_members_user_id'), 'project_members', ['user_id'], unique=False)
     op.create_table('study_session_members',
     sa.Column('session_id', sa.String(length=32), nullable=False),
     sa.Column('user_id', sa.String(length=32), nullable=False),
@@ -612,9 +545,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('session_id', 'user_id')
     )
-    with op.batch_alter_table('study_session_members', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_study_session_members_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_study_session_members_user_id'), 'study_session_members', ['user_id'], unique=False)
     op.create_table('study_session_resources',
     sa.Column('session_id', sa.String(length=32), nullable=False),
     sa.Column('resource_type', sa.String(length=32), nullable=False),
@@ -624,9 +555,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['session_id'], ['study_sessions.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('session_id', 'resource_type', 'resource_id')
     )
-    with op.batch_alter_table('study_session_resources', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_study_session_resources_added_by'), ['added_by'], unique=False)
-
+    op.create_index(op.f('ix_study_session_resources_added_by'), 'study_session_resources', ['added_by'], unique=False)
     op.create_table('tasks',
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
@@ -649,11 +578,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('tasks', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_tasks_assignee_id'), ['assignee_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_tasks_owner_id'), ['owner_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_tasks_project_id'), ['project_id'], unique=False)
-
+    op.create_index(op.f('ix_tasks_assignee_id'), 'tasks', ['assignee_id'], unique=False)
+    op.create_index(op.f('ix_tasks_owner_id'), 'tasks', ['owner_id'], unique=False)
+    op.create_index(op.f('ix_tasks_project_id'), 'tasks', ['project_id'], unique=False)
     op.create_table('whiteboards',
     sa.Column('name', sa.String(length=160), nullable=False),
     sa.Column('owner_id', sa.String(length=32), nullable=False),
@@ -669,9 +596,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['session_id'], ['study_sessions.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('whiteboards', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_whiteboards_owner_id'), ['owner_id'], unique=False)
-
+    op.create_index(op.f('ix_whiteboards_owner_id'), 'whiteboards', ['owner_id'], unique=False)
     op.create_table('database_properties',
     sa.Column('database_id', sa.String(length=32), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -682,9 +607,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['database_id'], ['databases.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('database_properties', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_database_properties_database_id'), ['database_id'], unique=False)
-
+    op.create_index(op.f('ix_database_properties_database_id'), 'database_properties', ['database_id'], unique=False)
     op.create_table('database_records',
     sa.Column('database_id', sa.String(length=32), nullable=False),
     sa.Column('created_by', sa.String(length=32), nullable=False),
@@ -697,10 +620,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['page_id'], ['pages.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('database_records', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_database_records_created_by'), ['created_by'], unique=False)
-        batch_op.create_index(batch_op.f('ix_database_records_database_id'), ['database_id'], unique=False)
-
+    op.create_index(op.f('ix_database_records_created_by'), 'database_records', ['created_by'], unique=False)
+    op.create_index(op.f('ix_database_records_database_id'), 'database_records', ['database_id'], unique=False)
     op.create_table('database_views',
     sa.Column('database_id', sa.String(length=32), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -711,9 +632,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['database_id'], ['databases.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('database_views', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_database_views_database_id'), ['database_id'], unique=False)
-
+    op.create_index(op.f('ix_database_views_database_id'), 'database_views', ['database_id'], unique=False)
     op.create_table('event_participants',
     sa.Column('event_id', sa.String(length=32), nullable=False),
     sa.Column('user_id', sa.String(length=32), nullable=False),
@@ -722,9 +641,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('event_id', 'user_id')
     )
-    with op.batch_alter_table('event_participants', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_event_participants_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_event_participants_user_id'), 'event_participants', ['user_id'], unique=False)
     op.create_table('message_attachments',
     sa.Column('message_id', sa.String(length=32), nullable=False),
     sa.Column('file_id', sa.String(length=32), nullable=True),
@@ -736,9 +653,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['message_id'], ['messages.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('message_attachments', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_message_attachments_message_id'), ['message_id'], unique=False)
-
+    op.create_index(op.f('ix_message_attachments_message_id'), 'message_attachments', ['message_id'], unique=False)
     op.create_table('message_reactions',
     sa.Column('id', sa.String(length=32), nullable=False),
     sa.Column('message_id', sa.String(length=32), nullable=False),
@@ -749,10 +664,8 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('message_id', 'user_id', 'emoji', name='uq_msg_reaction')
     )
-    with op.batch_alter_table('message_reactions', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_message_reactions_message_id'), ['message_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_message_reactions_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_message_reactions_message_id'), 'message_reactions', ['message_id'], unique=False)
+    op.create_index(op.f('ix_message_reactions_user_id'), 'message_reactions', ['user_id'], unique=False)
     op.create_table('message_reads',
     sa.Column('message_id', sa.String(length=32), nullable=False),
     sa.Column('user_id', sa.String(length=32), nullable=False),
@@ -762,9 +675,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('message_id', 'user_id'),
     sa.UniqueConstraint('message_id', 'user_id', name='uq_message_read')
     )
-    with op.batch_alter_table('message_reads', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_message_reads_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_message_reads_user_id'), 'message_reads', ['user_id'], unique=False)
     op.create_table('reminders',
     sa.Column('user_id', sa.String(length=32), nullable=False),
     sa.Column('event_id', sa.String(length=32), nullable=True),
@@ -779,10 +690,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('reminders', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_reminders_remind_at'), ['remind_at'], unique=False)
-        batch_op.create_index(batch_op.f('ix_reminders_user_id'), ['user_id'], unique=False)
-
+    op.create_index(op.f('ix_reminders_remind_at'), 'reminders', ['remind_at'], unique=False)
+    op.create_index(op.f('ix_reminders_user_id'), 'reminders', ['user_id'], unique=False)
     op.create_table('task_relations',
     sa.Column('task_id', sa.String(length=32), nullable=False),
     sa.Column('resource_type', sa.String(length=32), nullable=False),
@@ -791,25 +700,20 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('task_relations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_task_relations_task_id'), ['task_id'], unique=False)
-
+    op.create_index(op.f('ix_task_relations_task_id'), 'task_relations', ['task_id'], unique=False)
     op.create_table('whiteboard_operations',
+    sa.Column('seq', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('whiteboard_id', sa.String(length=32), nullable=False),
-    sa.Column('seq', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.String(length=32), nullable=False),
     sa.Column('op_type', sa.String(length=32), nullable=False),
     sa.Column('payload_json', sa.Text(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('id', sa.String(length=32), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['whiteboard_id'], ['whiteboards.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('seq')
     )
-    with op.batch_alter_table('whiteboard_operations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_whiteboard_operations_user_id'), ['user_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_whiteboard_operations_whiteboard_id'), ['whiteboard_id'], unique=False)
-
+    op.create_index(op.f('ix_whiteboard_operations_user_id'), 'whiteboard_operations', ['user_id'], unique=False)
+    op.create_index(op.f('ix_whiteboard_operations_whiteboard_id'), 'whiteboard_operations', ['whiteboard_id'], unique=False)
     op.create_table('database_record_values',
     sa.Column('record_id', sa.String(length=32), nullable=False),
     sa.Column('property_id', sa.String(length=32), nullable=False),
@@ -819,9 +723,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('record_id', 'property_id'),
     sa.UniqueConstraint('record_id', 'property_id', name='uq_record_value')
     )
-    with op.batch_alter_table('database_record_values', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_database_record_values_property_id'), ['property_id'], unique=False)
-
+    op.create_index(op.f('ix_database_record_values_property_id'), 'database_record_values', ['property_id'], unique=False)
     op.create_table('database_relations',
     sa.Column('database_id', sa.String(length=32), nullable=False),
     sa.Column('source_property_id', sa.String(length=32), nullable=False),
@@ -832,245 +734,143 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['target_database_id'], ['databases.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('database_relations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_database_relations_database_id'), ['database_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_database_relations_source_property_id'), ['source_property_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_database_relations_target_database_id'), ['target_database_id'], unique=False)
-
+    op.create_index(op.f('ix_database_relations_database_id'), 'database_relations', ['database_id'], unique=False)
+    op.create_index(op.f('ix_database_relations_source_property_id'), 'database_relations', ['source_property_id'], unique=False)
+    op.create_index(op.f('ix_database_relations_target_database_id'), 'database_relations', ['target_database_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    with op.batch_alter_table('database_relations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_database_relations_target_database_id'))
-        batch_op.drop_index(batch_op.f('ix_database_relations_source_property_id'))
-        batch_op.drop_index(batch_op.f('ix_database_relations_database_id'))
-
+    op.drop_index(op.f('ix_database_relations_target_database_id'), table_name='database_relations')
+    op.drop_index(op.f('ix_database_relations_source_property_id'), table_name='database_relations')
+    op.drop_index(op.f('ix_database_relations_database_id'), table_name='database_relations')
     op.drop_table('database_relations')
-    with op.batch_alter_table('database_record_values', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_database_record_values_property_id'))
-
+    op.drop_index(op.f('ix_database_record_values_property_id'), table_name='database_record_values')
     op.drop_table('database_record_values')
-    with op.batch_alter_table('whiteboard_operations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_whiteboard_operations_whiteboard_id'))
-        batch_op.drop_index(batch_op.f('ix_whiteboard_operations_user_id'))
-
+    op.drop_index(op.f('ix_whiteboard_operations_whiteboard_id'), table_name='whiteboard_operations')
+    op.drop_index(op.f('ix_whiteboard_operations_user_id'), table_name='whiteboard_operations')
     op.drop_table('whiteboard_operations')
-    with op.batch_alter_table('task_relations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_task_relations_task_id'))
-
+    op.drop_index(op.f('ix_task_relations_task_id'), table_name='task_relations')
     op.drop_table('task_relations')
-    with op.batch_alter_table('reminders', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_reminders_user_id'))
-        batch_op.drop_index(batch_op.f('ix_reminders_remind_at'))
-
+    op.drop_index(op.f('ix_reminders_user_id'), table_name='reminders')
+    op.drop_index(op.f('ix_reminders_remind_at'), table_name='reminders')
     op.drop_table('reminders')
-    with op.batch_alter_table('message_reads', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_message_reads_user_id'))
-
+    op.drop_index(op.f('ix_message_reads_user_id'), table_name='message_reads')
     op.drop_table('message_reads')
-    with op.batch_alter_table('message_reactions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_message_reactions_user_id'))
-        batch_op.drop_index(batch_op.f('ix_message_reactions_message_id'))
-
+    op.drop_index(op.f('ix_message_reactions_user_id'), table_name='message_reactions')
+    op.drop_index(op.f('ix_message_reactions_message_id'), table_name='message_reactions')
     op.drop_table('message_reactions')
-    with op.batch_alter_table('message_attachments', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_message_attachments_message_id'))
-
+    op.drop_index(op.f('ix_message_attachments_message_id'), table_name='message_attachments')
     op.drop_table('message_attachments')
-    with op.batch_alter_table('event_participants', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_event_participants_user_id'))
-
+    op.drop_index(op.f('ix_event_participants_user_id'), table_name='event_participants')
     op.drop_table('event_participants')
-    with op.batch_alter_table('database_views', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_database_views_database_id'))
-
+    op.drop_index(op.f('ix_database_views_database_id'), table_name='database_views')
     op.drop_table('database_views')
-    with op.batch_alter_table('database_records', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_database_records_database_id'))
-        batch_op.drop_index(batch_op.f('ix_database_records_created_by'))
-
+    op.drop_index(op.f('ix_database_records_database_id'), table_name='database_records')
+    op.drop_index(op.f('ix_database_records_created_by'), table_name='database_records')
     op.drop_table('database_records')
-    with op.batch_alter_table('database_properties', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_database_properties_database_id'))
-
+    op.drop_index(op.f('ix_database_properties_database_id'), table_name='database_properties')
     op.drop_table('database_properties')
-    with op.batch_alter_table('whiteboards', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_whiteboards_owner_id'))
-
+    op.drop_index(op.f('ix_whiteboards_owner_id'), table_name='whiteboards')
     op.drop_table('whiteboards')
-    with op.batch_alter_table('tasks', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_tasks_project_id'))
-        batch_op.drop_index(batch_op.f('ix_tasks_owner_id'))
-        batch_op.drop_index(batch_op.f('ix_tasks_assignee_id'))
-
+    op.drop_index(op.f('ix_tasks_project_id'), table_name='tasks')
+    op.drop_index(op.f('ix_tasks_owner_id'), table_name='tasks')
+    op.drop_index(op.f('ix_tasks_assignee_id'), table_name='tasks')
     op.drop_table('tasks')
-    with op.batch_alter_table('study_session_resources', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_study_session_resources_added_by'))
-
+    op.drop_index(op.f('ix_study_session_resources_added_by'), table_name='study_session_resources')
     op.drop_table('study_session_resources')
-    with op.batch_alter_table('study_session_members', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_study_session_members_user_id'))
-
+    op.drop_index(op.f('ix_study_session_members_user_id'), table_name='study_session_members')
     op.drop_table('study_session_members')
-    with op.batch_alter_table('project_members', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_project_members_user_id'))
-
+    op.drop_index(op.f('ix_project_members_user_id'), table_name='project_members')
     op.drop_table('project_members')
-    with op.batch_alter_table('page_tags', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_page_tags_tag_id'))
-
+    op.drop_index(op.f('ix_page_tags_tag_id'), table_name='page_tags')
     op.drop_table('page_tags')
-    with op.batch_alter_table('page_revisions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_page_revisions_page_id'))
-        batch_op.drop_index(batch_op.f('ix_page_revisions_author_id'))
-
+    op.drop_index(op.f('ix_page_revisions_page_id'), table_name='page_revisions')
+    op.drop_index(op.f('ix_page_revisions_author_id'), table_name='page_revisions')
     op.drop_table('page_revisions')
-    with op.batch_alter_table('page_permissions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_page_permissions_page_id'))
-
+    op.drop_index(op.f('ix_page_permissions_page_id'), table_name='page_permissions')
     op.drop_table('page_permissions')
-    with op.batch_alter_table('page_links', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_page_links_target_id'))
-        batch_op.drop_index(batch_op.f('ix_page_links_source_id'))
-
+    op.drop_index(op.f('ix_page_links_target_id'), table_name='page_links')
+    op.drop_index(op.f('ix_page_links_source_id'), table_name='page_links')
     op.drop_table('page_links')
-    with op.batch_alter_table('page_blocks', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_page_blocks_page_id'))
-        batch_op.drop_index(batch_op.f('ix_page_blocks_created_by'))
-
+    op.drop_index(op.f('ix_page_blocks_page_id'), table_name='page_blocks')
+    op.drop_index(op.f('ix_page_blocks_created_by'), table_name='page_blocks')
     op.drop_table('page_blocks')
-    with op.batch_alter_table('messages', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_messages_sender_id'))
-        batch_op.drop_index(batch_op.f('ix_messages_created_at'))
-        batch_op.drop_index(batch_op.f('ix_messages_conversation_id'))
-
+    op.drop_index(op.f('ix_messages_sender_id'), table_name='messages')
+    op.drop_index(op.f('ix_messages_created_at'), table_name='messages')
+    op.drop_index(op.f('ix_messages_conversation_id'), table_name='messages')
     op.drop_table('messages')
-    with op.batch_alter_table('file_versions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_file_versions_file_id'))
-        batch_op.drop_index(batch_op.f('ix_file_versions_created_by'))
-
+    op.drop_index(op.f('ix_file_versions_file_id'), table_name='file_versions')
+    op.drop_index(op.f('ix_file_versions_created_by'), table_name='file_versions')
     op.drop_table('file_versions')
-    with op.batch_alter_table('file_tags', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_file_tags_tag_id'))
-
+    op.drop_index(op.f('ix_file_tags_tag_id'), table_name='file_tags')
     op.drop_table('file_tags')
-    with op.batch_alter_table('file_shares', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_file_shares_shared_with_user_id'))
-        batch_op.drop_index(batch_op.f('ix_file_shares_shared_with_group_id'))
-        batch_op.drop_index(batch_op.f('ix_file_shares_file_id'))
-
+    op.drop_index(op.f('ix_file_shares_shared_with_user_id'), table_name='file_shares')
+    op.drop_index(op.f('ix_file_shares_shared_with_group_id'), table_name='file_shares')
+    op.drop_index(op.f('ix_file_shares_file_id'), table_name='file_shares')
     op.drop_table('file_shares')
-    with op.batch_alter_table('file_comments', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_file_comments_file_id'))
-        batch_op.drop_index(batch_op.f('ix_file_comments_author_id'))
-
+    op.drop_index(op.f('ix_file_comments_file_id'), table_name='file_comments')
+    op.drop_index(op.f('ix_file_comments_author_id'), table_name='file_comments')
     op.drop_table('file_comments')
-    with op.batch_alter_table('document_annotations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_document_annotations_file_id'))
-        batch_op.drop_index(batch_op.f('ix_document_annotations_author_id'))
-
+    op.drop_index(op.f('ix_document_annotations_file_id'), table_name='document_annotations')
+    op.drop_index(op.f('ix_document_annotations_author_id'), table_name='document_annotations')
     op.drop_table('document_annotations')
-    with op.batch_alter_table('databases', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_databases_owner_id'))
-
+    op.drop_index(op.f('ix_databases_owner_id'), table_name='databases')
     op.drop_table('databases')
-    with op.batch_alter_table('conversation_members', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_conversation_members_user_id'))
-
+    op.drop_index(op.f('ix_conversation_members_user_id'), table_name='conversation_members')
     op.drop_table('conversation_members')
-    with op.batch_alter_table('collection_items', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_collection_items_file_id'))
-
+    op.drop_index(op.f('ix_collection_items_file_id'), table_name='collection_items')
     op.drop_table('collection_items')
-    with op.batch_alter_table('calendar_events', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_calendar_events_start_at'))
-        batch_op.drop_index(batch_op.f('ix_calendar_events_organizer_id'))
-
+    op.drop_index(op.f('ix_calendar_events_start_at'), table_name='calendar_events')
+    op.drop_index(op.f('ix_calendar_events_organizer_id'), table_name='calendar_events')
     op.drop_table('calendar_events')
-    with op.batch_alter_table('study_sessions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_study_sessions_owner_id'))
-
+    op.drop_index(op.f('ix_study_sessions_owner_id'), table_name='study_sessions')
     op.drop_table('study_sessions')
-    with op.batch_alter_table('projects', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_projects_owner_id'))
-
+    op.drop_index(op.f('ix_projects_owner_id'), table_name='projects')
     op.drop_table('projects')
-    with op.batch_alter_table('pages', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_pages_parent_id'))
-        batch_op.drop_index(batch_op.f('ix_pages_owner_id'))
-
+    op.drop_index(op.f('ix_pages_parent_id'), table_name='pages')
+    op.drop_index(op.f('ix_pages_owner_id'), table_name='pages')
     op.drop_table('pages')
     op.drop_table('group_settings')
-    with op.batch_alter_table('group_members', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_group_members_user_id'))
-
+    op.drop_index(op.f('ix_group_members_user_id'), table_name='group_members')
     op.drop_table('group_members')
-    with op.batch_alter_table('group_invitations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_group_invitations_inviter_id'))
-        batch_op.drop_index(batch_op.f('ix_group_invitations_group_id'))
-
+    op.drop_index(op.f('ix_group_invitations_inviter_id'), table_name='group_invitations')
+    op.drop_index(op.f('ix_group_invitations_group_id'), table_name='group_invitations')
     op.drop_table('group_invitations')
-    with op.batch_alter_table('files', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_files_owner_id'))
-        batch_op.drop_index(batch_op.f('ix_files_group_id'))
-
+    op.drop_index(op.f('ix_files_owner_id'), table_name='files')
+    op.drop_index(op.f('ix_files_group_id'), table_name='files')
     op.drop_table('files')
-    with op.batch_alter_table('conversations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_conversations_group_id'))
-
+    op.drop_index(op.f('ix_conversations_group_id'), table_name='conversations')
     op.drop_table('conversations')
-    with op.batch_alter_table('collections', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_collections_owner_id'))
-
+    op.drop_index(op.f('ix_collections_owner_id'), table_name='collections')
     op.drop_table('collections')
     op.drop_table('user_settings')
-    with op.batch_alter_table('tags', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_tags_owner_id'))
-
+    op.drop_index(op.f('ix_tags_owner_id'), table_name='tags')
     op.drop_table('tags')
-    with op.batch_alter_table('sessions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_sessions_user_id'))
-        batch_op.drop_index(batch_op.f('ix_sessions_refresh_token_hash'))
-
+    op.drop_index(op.f('ix_sessions_user_id'), table_name='sessions')
+    op.drop_index(op.f('ix_sessions_refresh_token_hash'), table_name='sessions')
     op.drop_table('sessions')
-    with op.batch_alter_table('security_events', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_security_events_user_id'))
-        batch_op.drop_index(batch_op.f('ix_security_events_event_type'))
-
+    op.drop_index(op.f('ix_security_events_user_id'), table_name='security_events')
+    op.drop_index(op.f('ix_security_events_event_type'), table_name='security_events')
     op.drop_table('security_events')
-    with op.batch_alter_table('notifications', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_notifications_user_id'))
-
+    op.drop_index(op.f('ix_notifications_user_id'), table_name='notifications')
     op.drop_table('notifications')
-    with op.batch_alter_table('invitations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_invitations_target_id'))
-        batch_op.drop_index(batch_op.f('ix_invitations_inviter_id'))
-        batch_op.drop_index(batch_op.f('ix_invitations_invitee_id'))
-
+    op.drop_index(op.f('ix_invitations_target_id'), table_name='invitations')
+    op.drop_index(op.f('ix_invitations_inviter_id'), table_name='invitations')
+    op.drop_index(op.f('ix_invitations_invitee_id'), table_name='invitations')
     op.drop_table('invitations')
-    with op.batch_alter_table('groups', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_groups_owner_id'))
-
+    op.drop_index(op.f('ix_groups_owner_id'), table_name='groups')
     op.drop_table('groups')
-    with op.batch_alter_table('external_identities', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_external_identities_user_id'))
-
+    op.drop_index(op.f('ix_external_identities_user_id'), table_name='external_identities')
     op.drop_table('external_identities')
-    with op.batch_alter_table('contacts', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_contacts_owner_id'))
-        batch_op.drop_index(batch_op.f('ix_contacts_contact_user_id'))
-
+    op.drop_index(op.f('ix_contacts_owner_id'), table_name='contacts')
+    op.drop_index(op.f('ix_contacts_contact_user_id'), table_name='contacts')
     op.drop_table('contacts')
-    with op.batch_alter_table('audit_events', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_audit_events_user_id'))
-        batch_op.drop_index(batch_op.f('ix_audit_events_action'))
-
+    op.drop_index(op.f('ix_audit_events_user_id'), table_name='audit_events')
+    op.drop_index(op.f('ix_audit_events_action'), table_name='audit_events')
     op.drop_table('audit_events')
-    with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_users_username'))
-        batch_op.drop_index(batch_op.f('ix_users_email'))
-
+    op.drop_index(op.f('ix_users_username'), table_name='users')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     # ### end Alembic commands ###
