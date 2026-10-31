@@ -189,6 +189,7 @@ API for development.
 
 ```sh
 cp .env.example .env    # set SECRET_KEY, origins, COOKIE_SECURE=true
+./scripts/setup.sh      # render infra/livekit.yaml + infra/turnserver.conf from .env
 docker compose up -d --build
 ```
 
@@ -233,6 +234,7 @@ cd frontend && npm run build    # production build
 
 ## 📚 Documentation
 
+- [`docs/INSTALL.md`](docs/INSTALL.md) — full installation & setup guide.
 - [`docs/API.md`](docs/API.md) — endpoint reference.
 - [`docs/SECURITY.md`](docs/SECURITY.md) — threat model and hardening.
 - [`docs/CONCURRENCY.md`](docs/CONCURRENCY.md) — ~100 concurrent users, conflict handling, scale-out.

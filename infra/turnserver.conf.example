@@ -1,0 +1,13 @@
+# coturn (TURN server) configuration for Kumo.
+# This is a TEMPLATE — do NOT commit real credentials here.
+# Generate the live file (infra/turnserver.conf) from your .env with:
+#   ./scripts/setup.sh
+listening-port=3478
+tls-listening-port=5349
+fingerprint
+lt-cred-mech
+realm=kumo
+user=${TURN_USERNAME}:${TURN_CREDENTIAL}
+no-multicast-peers
+min-port=49160
+max-port=49200

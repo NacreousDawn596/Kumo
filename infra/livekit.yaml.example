@@ -1,4 +1,7 @@
 # LiveKit server configuration (group audio SFU).
+# This is a TEMPLATE — do NOT commit real keys here.
+# Generate the live file (infra/livekit.yaml) from your .env with:
+#   ./scripts/setup.sh
 # See https://docs.livekit.io for full options.
 port: 7880
 rtc:
@@ -7,4 +10,4 @@ rtc:
   port_range_end: 7890
   use_external_ip: false
 keys:
-  2aAmXboX2gok3u_DLZIW03hxzyz8Or1t: ZytP2hfFmoLCNeI3YUEPmuf5acQC-e71ZWmepPtQ_QM
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}

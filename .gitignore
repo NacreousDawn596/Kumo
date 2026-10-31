@@ -28,6 +28,10 @@ data/
 *.db-shm
 storage/
 
+# Generated infra configs (rendered from .env by scripts/setup.sh)
+infra/livekit.yaml
+infra/turnserver.conf
+
 # OS / editor
 .DS_Store
 Thumbs.db
