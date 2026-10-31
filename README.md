@@ -25,7 +25,7 @@
   <a href="#-communication"><img alt="WebRTC" src="https://img.shields.io/badge/Voice-WebRTC%20%2B%20LiveKit-7c2bb4?style=flat-square"></a>
   <a href="#-collaboration"><img alt="Realtime" src="https://img.shields.io/badge/Realtime-WebSocket-7c2bb4?style=flat-square"></a>
   <a href="#-testing"><img alt="Tests" src="https://img.shields.io/badge/Tests-47%20passing-16a34a?style=flat-square"></a>
-  <a href="#license"><img alt="License" src="https://img.shields.io/badge/License-Proprietary-111?style=flat-square"></a>
+  <a href="#license"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue?style=flat-square"></a>
 </p>
 
 ---
@@ -246,7 +246,8 @@ cd frontend && npm run build    # production build
 
 ## License
 
-Proprietary — all rights reserved.
+Kumo is free software licensed under the [GNU General Public License v3.0](LICENSE).
+See [`LICENSE`](LICENSE) for the full text.
 
 ---
 
